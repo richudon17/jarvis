@@ -1,0 +1,7 @@
+Hello from Jarvis!
+This is a test file to verify file reading capabilities.
+It contains multiple lines of text.
+Line 4: Testing file operations in Phase 1.
+Line 5: JARVIS can read and write files successfully.
+Line 6: This demonstrates the autonomous agent functionality.
+Line 7: End of test content.
