@@ -1,0 +1,163 @@
+{
+  "goal_id": "test-e2e-1",
+  "goal": "Create artifact and finish",
+  "trace_started_at": "2026-05-26T18:47:33.161342+00:00",
+  "trace_ended_at": "2026-05-26T18:47:33.181091+00:00",
+  "final_status": "aborted",
+  "final_reason": "orchestrator exited without explicit completion/failure",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T18:47:33.161354+00:00",
+      "goal_id": "test-e2e-1",
+      "goal": "Create artifact and finish",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/test-e2e-1"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T18:47:33.162515+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T18:47:33.162526+00:00",
+      "plan_summary": "Write artifact and finish",
+      "step_count": 2,
+      "step_indexes": [
+        1,
+        2
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.162531+00:00",
+      "step_index": 1,
+      "tool": "file_write",
+      "input": {
+        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+        "content": "print(\"hello\")\n"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "python_smoke_test",
+      "timestamp": "2026-05-26T18:47:33.179250+00:00",
+      "step_index": 1,
+      "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+      "smoke_result": {
+        "compiled": true,
+        "executed": true,
+        "exit_code": 0,
+        "stdout": "hello\n",
+        "stderr": "",
+        "timeout": false,
+        "runtime_seconds": 0.015685319900512695,
+        "safe_to_execute": true,
+        "execution_skipped": false,
+        "compile_error": null,
+        "safety_issues": [],
+        "help_run": false,
+        "runtime_mode": "executed"
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.179294+00:00",
+      "step_index": 1,
+      "tool": "file_write",
+      "input": {
+        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+        "content": "print(\"hello\")\n"
+      },
+      "output": {
+        "ok": true,
+        "data": null,
+        "error": null,
+        "metadata": {
+          "bytes_written": 15,
+          "smoke_test": {
+            "compiled": true,
+            "executed": true,
+            "exit_code": 0,
+            "stdout": "hello\n",
+            "stderr": "",
+            "timeout": false,
+            "runtime_seconds": 0.015685319900512695,
+            "safe_to_execute": true,
+            "execution_skipped": false,
+            "compile_error": null,
+            "safety_issues": [],
+            "help_run": false,
+            "runtime_mode": "executed"
+          }
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: no output data",
+        "has_data": false
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.180046+00:00",
+      "step_index": 2,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.180690+00:00",
+      "step_index": 2,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "done"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=4",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "trace_finalized_on_exit",
+      "timestamp": "2026-05-26T18:47:33.181087+00:00",
+      "status": "running",
+      "reason": "orchestrator exited"
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "goal_id": "trace-planner-chaos",
+  "goal": "Do something ambiguous",
+  "trace_started_at": "2026-05-26T18:47:33.105787+00:00",
+  "trace_ended_at": "2026-05-26T18:47:33.107171+00:00",
+  "final_status": "failed",
+  "final_reason": "Plan exhausted",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T18:47:33.105791+00:00",
+      "goal_id": "trace-planner-chaos",
+      "goal": "Do something ambiguous",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-planner-chaos"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T18:47:33.106601+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T18:47:33.106604+00:00",
+      "plan_summary": "ambiguous fast done",
+      "step_count": 1,
+      "step_indexes": [
+        0
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.106607+00:00",
+      "step_index": 0,
+      "tool": "done",
+      "input": {
+        "summary": "ambiguous"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.106840+00:00",
+      "step_index": 0,
+      "tool": "done",
+      "input": {
+        "summary": "ambiguous"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "ambiguous"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=9",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T18:47:33.107158+00:00",
+      "passed": false,
+      "category": "unknown",
+      "score": 0.0,
+      "issues": [
+        "Unknown goal category; insufficient evidence for completion"
+      ],
+      "reasoning_trace": [
+        "Category=unknown: cannot establish reliable completion evidence."
+      ],
+      "failure_factors": [
+        {
+          "factor": "unknown_category",
+          "penalty": 1.0,
+          "detail": "Goal classification failed"
+        }
+      ],
+      "decision_reason": "Quality check failed: Unknown goal category; insufficient evidence for completion",
+      "advisory": {
+        "verify_status": "warn",
+        "verify_hints": [
+          "No successful steps were recorded before completion."
+        ],
+        "verify_confidence": 0.25,
+        "semantic_status": "warn",
+        "semantic_hints": [
+          "Could not infer semantic category from goal text."
+        ],
+        "semantic_confidence": 0.4
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "replan_triggered",
+      "timestamp": "2026-05-26T18:47:33.107165+00:00",
+      "trigger": "quality_failure",
+      "attempt": 1,
+      "reason": "Quality check failed: Unknown goal category; insufficient evidence for completion"
+    },
+    {
+      "event_index": 7,
+      "event_type": "replan_result",
+      "timestamp": "2026-05-26T18:47:33.107168+00:00",
+      "attempt": 1,
+      "step_count": 0
+    },
+    {
+      "event_index": 8,
+      "event_type": "goal_failed",
+      "timestamp": "2026-05-26T18:47:33.107170+00:00",
+      "reason": "Plan exhausted"
+    }
+  ]
+}

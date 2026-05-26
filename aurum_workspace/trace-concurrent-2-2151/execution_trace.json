@@ -1,0 +1,164 @@
+{
+  "goal_id": "trace-concurrent-2-2151",
+  "goal": "goal token_2",
+  "trace_started_at": "2026-05-26T18:47:33.123769+00:00",
+  "trace_ended_at": "2026-05-26T18:47:33.126118+00:00",
+  "final_status": "completed",
+  "final_reason": "token_2",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T18:47:33.123773+00:00",
+      "goal_id": "trace-concurrent-2-2151",
+      "goal": "goal token_2",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-concurrent-2-2151"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T18:47:33.124530+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T18:47:33.124533+00:00",
+      "plan_summary": "per-goal file",
+      "step_count": 2,
+      "step_indexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.124536+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "token_2.txt",
+        "content": "token_2"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.125032+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "token_2.txt",
+        "content": "token_2"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-concurrent-2-2151/token_2.txt",
+          "bytes_written": 7
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "trace-concurrent-2-2151",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-concurrent-2-2151",
+          "workspace_files": [],
+          "path": "token_2.txt",
+          "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-concurrent-2-2151/token_2.txt",
+          "bytes_written": 7,
+          "python_syntax_valid": false,
+          "tool_timestamp": "2026-05-26T18:47:33.125025+00:00"
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: keys=['bytes_written', 'path']",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.125465+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "token_2"
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.125704+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "token_2"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "token_2"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=7",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T18:47:33.126111+00:00",
+      "passed": true,
+      "category": "file",
+      "score": 0.78,
+      "issues": [],
+      "reasoning_trace": [
+        "Category=file: validating direct file evidence.",
+        "Successful file_write count: 1.",
+        "Successful file_read count: 0.",
+        "Validating written artifact: token_2.txt.",
+        "Written artifact validated."
+      ],
+      "failure_factors": [],
+      "decision_reason": "quality passed",
+      "advisory": {
+        "verify_status": "ok",
+        "verify_hints": [],
+        "verify_confidence": 0.85,
+        "semantic_status": "warn",
+        "semantic_hints": [
+          "Could not infer semantic category from goal text."
+        ],
+        "semantic_confidence": 0.4
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "goal_completed",
+      "timestamp": "2026-05-26T18:47:33.126116+00:00",
+      "summary": "token_2"
+    }
+  ]
+}

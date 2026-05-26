@@ -1,0 +1,213 @@
+{
+  "goal_id": "trace-random-3",
+  "goal": "random goal 3",
+  "trace_started_at": "2026-05-26T18:47:33.084546+00:00",
+  "trace_ended_at": "2026-05-26T18:47:33.088163+00:00",
+  "final_status": "completed",
+  "final_reason": "ok",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T18:47:33.084553+00:00",
+      "goal_id": "trace-random-3",
+      "goal": "random goal 3",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-3"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T18:47:33.085470+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T18:47:33.085475+00:00",
+      "plan_summary": "randomized plan",
+      "step_count": 3,
+      "step_indexes": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.085479+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "g3.txt",
+        "content": "random goal 3"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.086082+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "g3.txt",
+        "content": "random goal 3"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-3/g3.txt",
+          "bytes_written": 13
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "trace-random-3",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-3",
+          "workspace_files": [],
+          "path": "g3.txt",
+          "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-3/g3.txt",
+          "bytes_written": 13,
+          "python_syntax_valid": false,
+          "tool_timestamp": "2026-05-26T18:47:33.086071+00:00"
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: keys=['bytes_written', 'path']",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.086505+00:00",
+      "step_index": 1,
+      "tool": "file_read",
+      "input": {
+        "path": "g3.txt"
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.087087+00:00",
+      "step_index": 1,
+      "tool": "file_read",
+      "input": {
+        "path": "g3.txt"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "content": "random goal 3"
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "trace-random-3",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-3",
+          "workspace_files": [],
+          "path": "g3.txt",
+          "bytes_read": 13,
+          "tool_timestamp": "2026-05-26T18:47:33.087082+00:00"
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_read",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_read: content_len=13",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.087389+00:00",
+      "step_index": 2,
+      "tool": "done",
+      "input": {
+        "summary": "ok"
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.087674+00:00",
+      "step_index": 2,
+      "tool": "done",
+      "input": {
+        "summary": "ok"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "ok"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=2",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 9,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T18:47:33.088156+00:00",
+      "passed": true,
+      "category": "file",
+      "score": 0.78,
+      "issues": [],
+      "reasoning_trace": [
+        "Category=file: validating direct file evidence.",
+        "Successful file_write count: 1.",
+        "Successful file_read count: 1.",
+        "Validating written artifact: g3.txt.",
+        "Written artifact validated."
+      ],
+      "failure_factors": [],
+      "decision_reason": "quality passed",
+      "advisory": {
+        "verify_status": "ok",
+        "verify_hints": [],
+        "verify_confidence": 0.85,
+        "semantic_status": "warn",
+        "semantic_hints": [
+          "Could not infer semantic category from goal text."
+        ],
+        "semantic_confidence": 0.4
+      }
+    },
+    {
+      "event_index": 10,
+      "event_type": "goal_completed",
+      "timestamp": "2026-05-26T18:47:33.088161+00:00",
+      "summary": "ok"
+    }
+  ]
+}

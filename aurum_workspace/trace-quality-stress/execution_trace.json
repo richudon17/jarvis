@@ -1,0 +1,227 @@
+{
+  "goal_id": "trace-quality-stress",
+  "goal": "Write weak.py",
+  "trace_started_at": "2026-05-26T18:47:33.110179+00:00",
+  "trace_ended_at": "2026-05-26T18:47:33.113630+00:00",
+  "final_status": "failed",
+  "final_reason": "Plan exhausted",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T18:47:33.110184+00:00",
+      "goal_id": "trace-quality-stress",
+      "goal": "Write weak.py",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T18:47:33.111238+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T18:47:33.111242+00:00",
+      "plan_summary": "weak code",
+      "step_count": 2,
+      "step_indexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.111246+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "weak.py",
+        "content": "def main():\n    pass\n"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "python_smoke_test",
+      "timestamp": "2026-05-26T18:47:33.112202+00:00",
+      "step_index": 0,
+      "path": "weak.py",
+      "smoke_result": {
+        "compiled": false,
+        "executed": false,
+        "exit_code": null,
+        "stdout": "",
+        "stderr": "",
+        "timeout": false,
+        "runtime_seconds": 0.0,
+        "safe_to_execute": true,
+        "execution_skipped": false,
+        "compile_error": "file not found",
+        "safety_issues": [],
+        "help_run": false,
+        "runtime_mode": "pending"
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.112211+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "weak.py",
+        "content": "def main():\n    pass\n"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress/weak.py",
+          "bytes_written": 21
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "trace-quality-stress",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress",
+          "workspace_files": [],
+          "path": "weak.py",
+          "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress/weak.py",
+          "bytes_written": 21,
+          "python_syntax_valid": true,
+          "tool_timestamp": "2026-05-26T18:47:33.111754+00:00",
+          "smoke_test": {
+            "compiled": false,
+            "executed": false,
+            "exit_code": null,
+            "stdout": "",
+            "stderr": "",
+            "timeout": false,
+            "runtime_seconds": 0.0,
+            "safe_to_execute": true,
+            "execution_skipped": false,
+            "compile_error": "file not found",
+            "safety_issues": [],
+            "help_run": false,
+            "runtime_mode": "pending"
+          }
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: keys=['bytes_written', 'path']",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T18:47:33.112543+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T18:47:33.112861+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "done"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=4",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T18:47:33.113618+00:00",
+      "passed": false,
+      "category": "code",
+      "score": 0.5,
+      "issues": [
+        "Contains placeholder/stub logic"
+      ],
+      "reasoning_trace": [
+        "Category=code: validating Python artifact quality.",
+        "Successful Python file_write steps: 1.",
+        "Evaluating artifact: weak.py.",
+        "Artifact size characters: 21.",
+        "AST parse succeeded.",
+        "Executable logic markers found.",
+        "Penalty applied: placeholder/stub markers detected.",
+        "Final code score=0.50, passed=False."
+      ],
+      "failure_factors": [
+        {
+          "factor": "placeholder_logic",
+          "penalty": 0.5,
+          "detail": "Contains placeholder/stub logic"
+        }
+      ],
+      "decision_reason": "Quality check failed: Contains placeholder/stub logic",
+      "advisory": {
+        "verify_status": "warn",
+        "verify_hints": [
+          "expected artifact missing/empty: weak.py"
+        ],
+        "verify_confidence": 0.45,
+        "semantic_status": "ok",
+        "semantic_hints": [],
+        "semantic_confidence": 0.78
+      }
+    },
+    {
+      "event_index": 9,
+      "event_type": "replan_triggered",
+      "timestamp": "2026-05-26T18:47:33.113625+00:00",
+      "trigger": "quality_failure",
+      "attempt": 1,
+      "reason": "Quality check failed: Contains placeholder/stub logic"
+    },
+    {
+      "event_index": 10,
+      "event_type": "replan_result",
+      "timestamp": "2026-05-26T18:47:33.113627+00:00",
+      "attempt": 1,
+      "step_count": 0
+    },
+    {
+      "event_index": 11,
+      "event_type": "goal_failed",
+      "timestamp": "2026-05-26T18:47:33.113628+00:00",
+      "reason": "Plan exhausted"
+    }
+  ]
+}
