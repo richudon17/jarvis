@@ -1,0 +1,137 @@
+{
+  "goal_id": "terminal-missing-b37dda72",
+  "goal": "read missing_27e23eba43544116b12ee19911b6cc82.txt",
+  "trace_started_at": "2026-05-26T12:27:29.695913+00:00",
+  "trace_ended_at": "2026-05-26T12:27:29.698313+00:00",
+  "final_status": "failed",
+  "final_reason": "File not found: missing_27e23eba43544116b12ee19911b6cc82.txt",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T12:27:29.695923+00:00",
+      "goal_id": "terminal-missing-b37dda72",
+      "goal": "read missing_27e23eba43544116b12ee19911b6cc82.txt",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/terminal-missing-b37dda72"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T12:27:29.697011+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T12:27:29.697025+00:00",
+      "plan_summary": "Read missing_27e23eba43544116b12ee19911b6cc82.txt",
+      "step_count": 2,
+      "step_indexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T12:27:29.697030+00:00",
+      "step_index": 0,
+      "tool": "file_read",
+      "input": {
+        "path": "missing_27e23eba43544116b12ee19911b6cc82.txt"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T12:27:29.697455+00:00",
+      "step_index": 0,
+      "tool": "file_read",
+      "input": {
+        "path": "missing_27e23eba43544116b12ee19911b6cc82.txt"
+      },
+      "output": {
+        "ok": false,
+        "data": null,
+        "error": "file not found",
+        "metadata": {
+          "goal_id": "terminal-missing-b37dda72",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/terminal-missing-b37dda72",
+          "workspace_files": [],
+          "path": "missing_27e23eba43544116b12ee19911b6cc82.txt",
+          "tool_timestamp": "2026-05-26T12:27:29.697442+00:00"
+        }
+      },
+      "status": "failed",
+      "observation": {
+        "tool": "file_read",
+        "status": "failed",
+        "ok": false,
+        "error": "file not found",
+        "issues": [
+          "file not found"
+        ],
+        "detected_errors": [
+          "file not found"
+        ],
+        "anomalies": [],
+        "output_summary": "file_read: no output data",
+        "has_data": false
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "deterministic_repair_triggered",
+      "timestamp": "2026-05-26T12:27:29.698241+00:00",
+      "step_index": 0,
+      "action": "stop",
+      "reason": "File not found: missing_27e23eba43544116b12ee19911b6cc82.txt",
+      "new_steps_count": 0,
+      "repeated_failure": false
+    },
+    {
+      "event_index": 6,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T12:27:29.698306+00:00",
+      "passed": false,
+      "category": "file",
+      "score": 0.0,
+      "issues": [
+        "No meaningful file evidence"
+      ],
+      "reasoning_trace": [
+        "Category=file: validating direct file evidence.",
+        "Successful file_write count: 0.",
+        "Successful file_read count: 0."
+      ],
+      "failure_factors": [
+        {
+          "factor": "missing_file_evidence",
+          "penalty": 1.0,
+          "detail": "No meaningful file evidence"
+        }
+      ],
+      "decision_reason": "File not found: missing_27e23eba43544116b12ee19911b6cc82.txt",
+      "advisory": {
+        "verify_status": "warn",
+        "verify_hints": [
+          "No successful steps were recorded before completion.",
+          "expected artifact missing/empty: missing_27e23eba43544116b12ee19911b6cc82.txt"
+        ],
+        "verify_confidence": 0.25,
+        "semantic_status": "warn",
+        "semantic_hints": [
+          "File goal has no successful file_write step."
+        ],
+        "semantic_confidence": 0.3
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "goal_failed",
+      "timestamp": "2026-05-26T12:27:29.698311+00:00",
+      "reason": "File not found: missing_27e23eba43544116b12ee19911b6cc82.txt"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "goal_id": "a6d0277d",
+  "goal": "replace the contents of hello.txt with goodbye world",
+  "trace_started_at": "2026-05-26T12:19:40.588229+00:00",
+  "trace_ended_at": "2026-05-26T12:19:41.261792+00:00",
+  "final_status": "aborted",
+  "final_reason": "orchestrator exited without explicit completion/failure",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T12:19:40.588300+00:00",
+      "goal_id": "a6d0277d",
+      "goal": "replace the contents of hello.txt with goodbye world",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/a6d0277d"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T12:19:40.595749+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T12:19:41.258848+00:00",
+      "plan_summary": "Replace the contents of hello.txt with goodbye world",
+      "step_count": 2,
+      "step_indexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T12:19:41.258859+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "hello.txt",
+        "content": "goodbye world"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T12:19:41.260007+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "hello.txt",
+        "content": "goodbye world"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "path": "/Users/richu/Downloads/jarvis/aurum_workspace/a6d0277d/hello.txt",
+          "bytes_written": 13
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "a6d0277d",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/a6d0277d",
+          "workspace_files": [],
+          "path": "hello.txt",
+          "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/a6d0277d/hello.txt",
+          "bytes_written": 13,
+          "python_syntax_valid": false,
+          "tool_timestamp": "2026-05-26T12:19:41.259990+00:00"
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: keys=['bytes_written', 'path']",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T12:19:41.260798+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "Replaced the contents of hello.txt with goodbye world"
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T12:19:41.261216+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "Replaced the contents of hello.txt with goodbye world"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "Replaced the contents of hello.txt with goodbye world"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=53",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T12:19:41.261764+00:00",
+      "passed": false,
+      "category": "hybrid",
+      "score": 0.0,
+      "issues": [
+        "Hybrid task requires successful file_read and file_write"
+      ],
+      "reasoning_trace": [
+        "Category=hybrid: validating read-transform-write flow.",
+        "Successful file_read present: False.",
+        "Successful file_write count: 1."
+      ],
+      "failure_factors": [
+        {
+          "factor": "incomplete_hybrid_pipeline",
+          "penalty": 1.0,
+          "detail": "Hybrid task requires successful file_read and file_write"
+        }
+      ],
+      "decision_reason": "Quality check failed: Hybrid task requires successful file_read and file_write",
+      "advisory": {
+        "verify_status": "warn",
+        "verify_hints": [
+          "expected artifact missing/empty: hello.txt"
+        ],
+        "verify_confidence": 0.45,
+        "semantic_status": "ok",
+        "semantic_hints": [],
+        "semantic_confidence": 0.72
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "replan_triggered",
+      "timestamp": "2026-05-26T12:19:41.261774+00:00",
+      "trigger": "quality_failure",
+      "attempt": 1,
+      "reason": "Quality check failed: Hybrid task requires successful file_read and file_write"
+    },
+    {
+      "event_index": 9,
+      "event_type": "trace_finalized_on_exit",
+      "timestamp": "2026-05-26T12:19:41.261789+00:00",
+      "status": "running",
+      "reason": "orchestrator exited"
+    }
+  ]
+}

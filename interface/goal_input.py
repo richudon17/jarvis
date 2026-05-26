@@ -1,6 +1,6 @@
 """
 interface/goal_input.py
-Simple CLI interface for submitting goals to JARVIS and viewing history.
+Simple CLI interface for submitting goals to AURUM and viewing history.
 """
 
 from rich.console import Console
@@ -11,10 +11,27 @@ console = Console()
 
 
 def prompt_goal() -> str:
-    """Prompt the user for a goal."""
-    console.print("\n[bold cyan]JARVIS[/bold cyan] [dim]— Autonomous Agent[/dim]")
-    console.print("[dim]Type your goal, or 'history' to see past tasks, or 'quit' to exit.[/dim]\n")
-    return input("Goal > ").strip()
+    console.print("\n[bold cyan]AURUM[/bold cyan] [dim]— Autonomous Agent[/dim]")
+    console.print("[dim]Type your goal, or 'history' to see past tasks, or 'quit' to exit.[/dim]")
+    console.print("[dim]For multiline goals, end your first line with \\ then keep typing. Type END to submit.[/dim]\n")
+    
+    first_line = input("Goal > ").strip()
+    
+    if first_line.lower() in ("quit", "exit", "q", "history", ""):
+        return first_line
+    
+    # Only go multiline if user ends line with backslash
+    if not first_line.endswith("\\"):
+        return first_line
+    
+    lines = [first_line.rstrip("\\")]
+    while True:
+        line = input("... ").strip()
+        if line.upper() == "END":
+            break
+        lines.append(line.rstrip("\\"))
+    
+    return "\n".join(lines).strip()
 
 
 def show_history():

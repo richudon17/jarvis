@@ -397,7 +397,7 @@ class Runner:
     def run_all(self):
         """Run all test categories."""
         print("\n" + "=" * 80)
-        print("JARVIS OFFLINE SEMANTIC VERIFICATION TEST SUITE")
+        print("AURUM OFFLINE SEMANTIC VERIFICATION TEST SUITE")
         print("=" * 80)
 
         for category, tests in TEST_CASES.items():

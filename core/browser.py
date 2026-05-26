@@ -1,4 +1,4 @@
-"""Browser automation layer for JARVIS Phase 2.
+"""Browser automation layer for AURUM Phase 2.
 
 Provides deterministic, safe browser primitives using Playwright.
 All actions return structured outputs with consistent schemas.
@@ -182,8 +182,8 @@ class BrowserContext:
         # must be deterministically cleaned to avoid unraisable warnings.
         # To keep strict warning mode stable, only allow real startup when
         # explicitly running Playwright E2E behavior.
-        if "pytest" in sys.modules and not os.environ.get("JARVIS_ALLOW_BROWSER_START", ""):
-            return _fail("browser start disabled under pytest (set JARVIS_ALLOW_BROWSER_START=1 to enable)", {"headless": headless})
+        if "pytest" in sys.modules and not os.environ.get("AURUM_ALLOW_BROWSER_START", ""):
+            return _fail("browser start disabled under pytest (set AURUM_ALLOW_BROWSER_START=1 to enable)", {"headless": headless})
 
         if not PLAYWRIGHT_AVAILABLE:
             return _fail("Playwright not installed. Run: pip install playwright && playwright install")

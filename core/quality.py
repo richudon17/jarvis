@@ -1,9 +1,8 @@
-"""Quality-aware review layer for Phase 1.
+"""Authoritative quality gate for goal completion.
 
-This module produces a structured quality report for the artifact implied by
-a goal, based on available evidence (completed/attempted steps).
-
-The quality review is intentionally heuristic and bounded.
+Final completion decision rule:
+- `review_quality(...)[\"passed\"] == True` => goal may complete
+- otherwise => goal must fail or replan
 """
 
 from __future__ import annotations
@@ -13,19 +12,21 @@ import re
 from pathlib import Path
 from typing import Any
 
+from core.workspace import resolve_workspace_path
+
 
 CATEGORY_CODE = "code"
 CATEGORY_RESEARCH = "research"
 CATEGORY_CALCULATION = "calculation"
 CATEGORY_FILE = "file"
+CATEGORY_HYBRID = "hybrid"
 CATEGORY_UNKNOWN = "unknown"
 
 
 _PLACEHOLDER_RE = re.compile(
-    r"\b(TODO|your code here|placeholder|pass\s*$|pass\s*#|pass\n)\b",
+    r"\b(TODO|your code here|placeholder|not implemented|pass\s*$|pass\s*#|pass\n)\b",
     re.IGNORECASE | re.MULTILINE,
 )
-
 _FILENAME_PATTERN = re.compile(r"[\w./-]+\.[A-Za-z0-9]+")
 
 
@@ -33,450 +34,480 @@ def _goal_filenames(goal: str) -> list[str]:
     return [m.group(0).rstrip(".,;:") for m in _FILENAME_PATTERN.finditer(goal)]
 
 
-def _goal_mentions_any(goal_lower: str, keywords: list[str]) -> bool:
+def _goal_mentions(goal_lower: str, keywords: list[str]) -> bool:
     return any(k in goal_lower for k in keywords)
+
+
+def _is_direct_file_overwrite_goal(goal_lower: str) -> bool:
+    return (
+        ("replace the contents of" in goal_lower or "replace contents of" in goal_lower or "overwrite" in goal_lower)
+        and " with " in goal_lower
+    )
+
+
+def _successful_steps(steps: list[dict], tool: str | None = None) -> list[dict]:
+    out = [s for s in steps if s.get("status") == "success"]
+    if tool:
+        return [s for s in out if s.get("tool") == tool]
+    return out
+
+
+def _resolve_path(path: str) -> Path:
+    return resolve_workspace_path(path)
+
+
+def _read_text(path: str) -> str:
+    try:
+        return _resolve_path(path).read_text(encoding="utf-8")
+    except Exception:
+        return ""
+
+
+def _file_non_empty(path: str) -> tuple[bool, str]:
+    p = _resolve_path(path)
+    if not p.exists():
+        return False, f"expected file {path} does not exist"
+    if not p.is_file():
+        return False, f"expected {path} to be a file"
+    if p.stat().st_size <= 0:
+        return False, f"expected {path} to be non-empty"
+    return True, ""
+
+
+def _failure_factor(factor: str, penalty: float, detail: str) -> dict[str, Any]:
+    return {"factor": factor, "penalty": penalty, "detail": detail}
+
+
+def _quality_result(
+    *,
+    passed: bool,
+    score: float,
+    issues: list[str],
+    category: str,
+    reasoning_trace: list[str],
+    failure_factors: list[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "passed": bool(passed),
+        "score": float(max(0.0, min(1.0, score))),
+        "issues": issues,
+        "category": category,
+        "reasoning_trace": reasoning_trace,
+        "failure_factors": failure_factors,
+    }
 
 
 def _infer_category(goal: str, filenames: list[str], completed_steps: list[dict]) -> str:
     gl = goal.lower()
 
-    if _goal_mentions_any(gl, ["research", "search", "look up", "find information"]):
+    if _goal_mentions(gl, ["research", "search", "look up", "find information", "investigate"]):
         return CATEGORY_RESEARCH
-    if _goal_mentions_any(gl, ["calculate", "compute", "solve", "fibonacci"]):
+
+    if _goal_mentions(gl, ["calculate", "compute", "solve", "fibonacci", "sum", "average", "mean", "median"]):
         return CATEGORY_CALCULATION
 
-    if filenames:
-        if any(p.endswith(".py") for p in filenames):
-            return CATEGORY_CODE
+    if filenames and _is_direct_file_overwrite_goal(gl):
         return CATEGORY_FILE
 
-    # Fall back: if a code-writing tool is present, assume code.
-    if any(s.get("tool") == "file_write" and str(s.get("tool_input", {}).get("path", "")).endswith(".py") for s in completed_steps):
+    if _goal_mentions(gl, ["reverse", "sort", "replace", "transform", "modify", "process", "convert"]):
+        return CATEGORY_HYBRID
+
+    if any(name.endswith(".py") for name in filenames):
         return CATEGORY_CODE
+
+    if any(
+        st.get("tool") == "file_write"
+        and str((st.get("tool_input") or {}).get("path", "")).endswith(".py")
+        for st in completed_steps
+    ):
+        return CATEGORY_CODE
+
+    if filenames or any(st.get("tool") in {"file_write", "file_read"} for st in completed_steps):
+        return CATEGORY_FILE
 
     return CATEGORY_UNKNOWN
 
 
-def _python_file_is_valid(path: str) -> tuple[bool, str]:
-    file_path = Path(path).expanduser()
-    try:
-        source = file_path.read_text(encoding="utf-8")
-        ast.parse(source)
-        return True, ""
-    except SyntaxError as e:
-        location = f"line {e.lineno}, column {e.offset}" if e.lineno else "unknown location"
-        return False, f"invalid syntax at {location}: {e.msg}"
-    except Exception as e:
-        return False, f"could not read/validate python: {e}"
-
-
-def _file_non_empty(path: str) -> tuple[bool, str]:
-    file_path = Path(path).expanduser()
-    if not file_path.exists():
-        return False, f"expected file {path} does not exist"
-    if not file_path.is_file():
-        return False, f"expected {path} to be a file"
-    if file_path.stat().st_size <= 0:
-        return False, f"expected {path} to be non-empty"
-    return True, ""
-
-
-def _read_text_if_exists(path: str) -> str:
-    try:
-        return Path(path).expanduser().read_text(encoding="utf-8")
-    except Exception:
-        return ""
-
-
-def _contains_any(text: str, tokens: list[str]) -> bool:
-    tl = text.lower()
-    return any(t.lower() in tl for t in tokens)
-
-
-def _quality_penalty(score: float, penalty: float) -> float:
-    return max(0.0, min(1.0, score - penalty))
-
-
-def _review_python_code(path: str, goal: str, completed_steps: list[dict] | None = None) -> dict[str, Any]:
-    score = 1.0
+def _review_python_code(goal: str, completed_steps: list[dict]) -> dict[str, Any]:
+    reasoning: list[str] = ["Category=code: validating Python artifact quality."]
+    factors: list[dict[str, Any]] = []
     issues: list[str] = []
-    recs: list[str] = []
+    score = 1.0
 
+    py_writes = [
+        st for st in _successful_steps(completed_steps, "file_write")
+        if str((st.get("tool_input") or {}).get("path", "")).endswith(".py")
+    ]
+    reasoning.append(f"Successful Python file_write steps: {len(py_writes)}.")
+    if not py_writes:
+        issues.append("No successful Python file_write evidence")
+        factors.append(_failure_factor("missing_python_write", 1.0, issues[-1]))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_CODE,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
+
+    path = str((py_writes[-1].get("tool_input") or {}).get("path", ""))
+    reasoning.append(f"Evaluating artifact: {path}.")
     ok, reason = _file_non_empty(path)
     if not ok:
-        return {
-            "passed": False,
-            "score": 0.0,
-            "issues": [reason],
-            "recommendations": ["Regenerate and write complete non-empty Python code."],
-            "category": CATEGORY_CODE,
-        }
+        issues.append(reason)
+        factors.append(_failure_factor("artifact_missing_or_empty", 1.0, reason))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_CODE,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    text = _read_text_if_exists(path)
-    if not text.strip():
-        score = 0.0
-        issues.append("Python file is empty or whitespace only.")
+    text = _read_text(path)
+    reasoning.append(f"Artifact size characters: {len(text)}.")
 
-    # Syntax
-    valid, syn_reason = _python_file_is_valid(path)
-    if not valid:
-        return {
-            "passed": False,
-            "score": 0.0,
-            "issues": [f"{syn_reason}"],
-            "recommendations": ["Fix Python syntax and write a valid module."],
-            "category": CATEGORY_CODE,
-        }
-
-    # Placeholder / stubs
-    if _PLACEHOLDER_RE.search(text):
-        score = _quality_penalty(score, 0.35)
-        issues.append("Code appears to contain placeholders/stubs (TODO/pass-your code here).")
-        recs.append("Replace placeholders with real implementation and executable logic.")
-
-    # Meaningful logic heuristic: function/class OR main/loop.
-    has_def = bool(re.search(r"^\s*def\s+\w+\s*\(", text, re.MULTILINE))
-    has_class = bool(re.search(r"^\s*class\s+\w+\b", text, re.MULTILINE))
-    has_main_guard = "if __name__ == \"__main__\":" in text or "if __name__ == '__main__':" in text
-    has_execution = bool(re.search(r"\bwhile\s+True\b|\bfor\s+\w+\s+in\s+|\bargparse\b|\bprint\(", text))
-
-    if not (has_def or has_class or has_execution):
-        score = _quality_penalty(score, 0.35)
-        issues.append("Code has little to no executable logic (no defs/classes and no obvious runtime flow).")
-        recs.append("Add real functions/classes or a runnable main/entrypoint.")
-
-    # Consider smoke-test runtime validation evidence (bonus)
     try:
-        bonus = _python_smoke_test_bonus(path, completed_steps)
-        if bonus > 0:
-            score = float(min(1.0, score + bonus))
-    except Exception:
-        pass
+        ast.parse(text)
+        reasoning.append("AST parse succeeded.")
+    except SyntaxError as e:
+        issue = f"invalid python: {e.msg}"
+        issues.append(issue)
+        factors.append(_failure_factor("invalid_python_syntax", 1.0, issue))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_CODE,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    # Banned/flagged patterns
-    if _contains_any(text, ["eval("]):
-        # Allow only if goal explicitly asks for eval-like calculator behavior.
-        if "calculator" not in goal.lower():
-            score = _quality_penalty(score, 0.25)
-            issues.append("Code uses eval() without an explicit calculator context.")
-            recs.append("Remove eval(); use safe parsing or direct computation.")
-
-    if re.search(r"\bexcept\s*:\s*$", text, re.MULTILINE):
-        score = _quality_penalty(score, 0.15)
-        issues.append("Code contains a bare except: handler.")
-        recs.append("Catch specific exception types and handle appropriately.")
-
-    # pygame/game heuristics
-    gl = goal.lower()
-    is_pygame_target = any(k in gl for k in ["pygame", "snake", "tetris", "game", "app"])
-    if "pygame" in text or is_pygame_target:
-        # Don't require execution, only structure.
-        has_pygame_init = "pygame.init" in text
-        has_event_loop = bool(re.search(r"pygame\.event\.get\(\)", text))
-        has_display_update = _contains_any(text, ["pygame.display.flip()", "pygame.display.update()", "display.flip()", "display.update()"])
-        has_clock_tick = "clock.tick" in text or "FPS" in text
-
-        # Penalize if likely auto-exec without a main guard.
-        has_main_guard = has_main_guard or bool(re.search(r"def\s+main\s*\(", text))
-        if re.search(r"^\s*pygame\.init\(\)\s*$", text, re.MULTILINE) and not has_main_guard:
-            score = _quality_penalty(score, 0.15)
-            issues.append("pygame.init() appears at import time without clear main/guard.")
-            recs.append("Move pygame.init() and game loop into a main() guarded by if __name__ == '__main__'.")
-
-        missing = []
-        if not has_pygame_init:
-            missing.append("pygame.init")
-        if not has_event_loop:
-            missing.append("pygame event loop")
-        if not has_display_update:
-            missing.append("display update/flip")
-        if not has_clock_tick:
-            missing.append("clock tick / frame limiting")
-
-        if missing:
-            score = _quality_penalty(score, 0.25 + 0.05 * len(missing))
-            issues.append(f"pygame/game structure missing: {', '.join(missing)}")
-            recs.append("Add a proper pygame loop with event handling and display update + clock.tick.")
-
-        # Obvious empty draw/blit calls
-        if re.search(r"pygame\.draw\.[a-zA-Z_]+\([^\)]*\)\s*\,\s*\)\s*", text):
-            score = _quality_penalty(score, 0.25)
-            issues.append("Possible malformed pygame.draw call detected.")
-            recs.append("Fix drawing calls (missing arguments) so they render correctly.")
-
-        if re.search(r"\.blit\([^\)]*,\s*\)$", text):
-            score = _quality_penalty(score, 0.2)
-            issues.append("Possible malformed surface.blit call detected.")
-            recs.append("Fix blit calls with complete coordinates/text surfaces.")
-
-    # CLI heuristics (argparse or main guard)
-    if "argparse" in text:
-        if not has_main_guard:
-            score = _quality_penalty(score, 0.15)
-            issues.append("argparse is used but no __main__ guard detected.")
-            recs.append("Wrap CLI entrypoint in if __name__ == '__main__': main().")
+    has_logic = any(token in text for token in ("def ", "class ", "for ", "while ", "return ", "import ", "print("))
+    if not has_logic:
+        issue = "No executable logic detected"
+        issues.append(issue)
+        factors.append(_failure_factor("low_logic_density", 0.4, issue))
+        score -= 0.4
+        reasoning.append("Penalty applied: no executable logic markers found.")
     else:
-        # If it's intended as CLI (goal mentions todo/app/command), ensure a main guard.
-        if any(k in goal.lower() for k in ["todo", "command", "cli", "list tasks", "terminal"]):
-            if not has_main_guard:
-                score = _quality_penalty(score, 0.25)
-                issues.append("CLI app appears to lack if __name__ == '__main__' guard.")
-                recs.append("Add a main guard and a clear command loop or argparse." )
+        reasoning.append("Executable logic markers found.")
 
-    passed = score >= 0.7 and not any("placeholders" in i.lower() for i in issues)
-    return {
-        "passed": passed,
-        "score": float(max(0.0, min(1.0, score))),
-        "issues": issues[:10],
-        "recommendations": recs[:10],
-        "category": CATEGORY_CODE,
-    }
+    if _PLACEHOLDER_RE.search(text):
+        issue = "Contains placeholder/stub logic"
+        issues.append(issue)
+        factors.append(_failure_factor("placeholder_logic", 0.5, issue))
+        score -= 0.5
+        reasoning.append("Penalty applied: placeholder/stub markers detected.")
+    else:
+        reasoning.append("No placeholder/stub markers detected.")
 
-
-def _python_smoke_test_bonus(path: str, completed_steps: list[dict] | None) -> float:
-    """Return a small positive bonus if smoke-test runtime evidence exists and passed."""
-    if not completed_steps:
-        return 0.0
-    for st in completed_steps:
-        if st.get("tool") == "file_write" and str(st.get("tool_input", {}).get("path", "")) == path:
-            tr = st.get("result")
-            if not isinstance(tr, dict):
-                return 0.0
-            meta = tr.get("metadata") or {}
-            smoke = meta.get("smoke_test") if isinstance(meta, dict) else None
-            if isinstance(smoke, dict):
-                # Reward compiled + executed or compiled + execution_skipped
-                if smoke.get("compiled") and (smoke.get("executed") or smoke.get("execution_skipped")):
-                    return 0.15
-    return 0.0
+    passed = score >= 0.6 and not issues
+    reasoning.append(f"Final code score={max(0.0, score):.2f}, passed={passed}.")
+    return _quality_result(
+        passed=passed,
+        score=max(0.0, score),
+        issues=issues,
+        category=CATEGORY_CODE,
+        reasoning_trace=reasoning,
+        failure_factors=factors,
+    )
 
 
-def _review_research(goal: str, completed_steps: list[dict], attempted_steps: list[dict]) -> dict[str, Any]:
-    score = 1.0
+def _review_research(goal: str, completed_steps: list[dict]) -> dict[str, Any]:
+    reasoning: list[str] = ["Category=research: validating search and summary/report evidence."]
+    factors: list[dict[str, Any]] = []
     issues: list[str] = []
-    recs: list[str] = []
 
-    # Find file_write to markdown/html-ish summary
-    out_paths: list[str] = []
-    for st in completed_steps:
-        if st.get("tool") == "file_write":
-            p = str(st.get("tool_input", {}).get("path", ""))
-            if p and not p.endswith(".py"):
-                out_paths.append(p)
+    successful_searches = _successful_steps(completed_steps, "web_search")
+    reasoning.append(f"Successful web_search steps: {len(successful_searches)}.")
+    if not successful_searches:
+        issue = "No successful web_search evidence"
+        issues.append(issue)
+        factors.append(_failure_factor("missing_research_source", 1.0, issue))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_RESEARCH,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    # If none, also allow summarize_text output presence.
-    has_summarize = any(st.get("tool") == "summarize_text" for st in completed_steps)
+    successful_summary = _successful_steps(completed_steps, "summarize_text")
+    reasoning.append(f"Successful summarize_text steps: {len(successful_summary)}.")
+    if successful_summary:
+        summary = ((successful_summary[-1].get("result") or {}).get("data") or {}).get("summary", "")
+        summary_len = len(summary.strip()) if isinstance(summary, str) else 0
+        reasoning.append(f"Summary length: {summary_len}.")
+        if isinstance(summary, str) and summary_len >= 40:
+            reasoning.append("Summary threshold met.")
+            return _quality_result(
+                passed=True,
+                score=0.85,
+                issues=[],
+                category=CATEGORY_RESEARCH,
+                reasoning_trace=reasoning,
+                failure_factors=[],
+            )
+        issue = "Summary content is too short or empty"
+        issues.append(issue)
+        factors.append(_failure_factor("weak_summary", 0.8, issue))
+        return _quality_result(
+            passed=False,
+            score=0.2,
+            issues=issues,
+            category=CATEGORY_RESEARCH,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    if not out_paths and not has_summarize:
-        return {
-            "passed": False,
-            "score": 0.0,
-            "issues": ["No research artifact or summarize step evidence found."],
-            "recommendations": ["Use web_search then summarize_text, then save a clear summary."],
-            "category": CATEGORY_RESEARCH,
-        }
+    report_writes = [
+        st for st in _successful_steps(completed_steps, "file_write")
+        if not str((st.get("tool_input") or {}).get("path", "")).endswith(".py")
+    ]
+    reasoning.append(f"Successful non-Python report writes: {len(report_writes)}.")
+    if not report_writes:
+        issue = "Research goal missing summarize_text or saved report artifact"
+        issues.append(issue)
+        factors.append(_failure_factor("missing_research_artifact", 0.8, issue))
+        return _quality_result(
+            passed=False,
+            score=0.2,
+            issues=issues,
+            category=CATEGORY_RESEARCH,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    # If file artifacts exist, validate the most likely one(s).
-    def check_text(text: str) -> float:
-        nonlocal score
-        lowered = text.lower()
-        # reject raw snippets dumps
-        if lowered.count("title:") + lowered.count("url:") + lowered.count("snippet:") >= 4:
-            score = _quality_penalty(score, 0.5)
-            issues.append("Research output looks like a raw search snippet dump.")
+    report_path = str((report_writes[-1].get("tool_input") or {}).get("path", ""))
+    reasoning.append(f"Evaluating report artifact: {report_path}.")
+    ok, reason = _file_non_empty(report_path)
+    if not ok:
+        issues.append(reason)
+        factors.append(_failure_factor("report_missing_or_empty", 0.9, reason))
+        return _quality_result(
+            passed=False,
+            score=0.1,
+            issues=issues,
+            category=CATEGORY_RESEARCH,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-        # require heading or bullets
-        if "#" not in text and "- " not in text:
-            score = _quality_penalty(score, 0.25)
-            issues.append("Research summary lacks a heading or bullet structure.")
+    report_text = _read_text(report_path).lower()
+    has_sources = ("sources" in report_text) or ("http" in report_text)
+    reasoning.append(f"Report source markers present: {has_sources}.")
+    if not has_sources:
+        issue = "Research report missing source evidence"
+        issues.append(issue)
+        factors.append(_failure_factor("missing_source_markers", 0.45, issue))
+        return _quality_result(
+            passed=False,
+            score=0.35,
+            issues=issues,
+            category=CATEGORY_RESEARCH,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-        # length
-        if len(text.strip()) < 120:
-            score = _quality_penalty(score, 0.2)
-            issues.append("Research summary is too short to be useful.")
-
-        # topical mention
-        gl = goal.lower()
-        if any(kw in gl for kw in ["python", "packaging", "docker", "kubernetes", "javascript", "ai", "ml"]):
-            topic = "python" if "python" in gl else "packaging" if "packaging" in gl else "research"
-            if topic not in lowered:
-                score = _quality_penalty(score, 0.15)
-                issues.append("Summary may not mention the requested topic strongly enough.")
-
-        # sources: if web_search evidence exists, require 'Source' or URLs.
-        has_web = any(st.get("tool") == "web_search" for st in attempted_steps)
-        if has_web:
-            has_urls = bool(re.search(r"https?://", text))
-            has_sources = "source" in lowered or "sources" in lowered
-            if not (has_urls or has_sources):
-                score = _quality_penalty(score, 0.15)
-                issues.append("No sources/URLs detected in research summary despite web_search evidence.")
-
-        return score
-
-    # Check stored file writes if any; otherwise check summarize_text data.
-    checked_any = False
-    for p in out_paths[:3]:
-        txt = _read_text_if_exists(p)
-        if txt:
-            checked_any = True
-            check_text(txt)
-
-    if not checked_any:
-        for st in completed_steps:
-            if st.get("tool") == "summarize_text":
-                data = st.get("result", {}).get("data") if isinstance(st.get("result"), dict) else None
-                summary = ""
-                if isinstance(data, dict):
-                    summary = data.get("summary") or data.get("text") or ""
-                if isinstance(summary, str) and summary:
-                    check_text(summary)
-                    checked_any = True
-                    break
-
-    if not checked_any:
-        score = _quality_penalty(score, 0.6)
-        issues.append("Could not inspect research summary content.")
-        recs.append("Save the research summary to a markdown file and include sources.")
-
-    passed = score >= 0.7
-    return {
-        "passed": passed,
-        "score": float(max(0.0, min(1.0, score))),
-        "issues": issues[:10],
-        "recommendations": recs[:10] or (["Improve summary structure and include sources."] if not passed else []),
-        "category": CATEGORY_RESEARCH,
-    }
+    reasoning.append("Research report validated.")
+    return _quality_result(
+        passed=True,
+        score=0.78,
+        issues=[],
+        category=CATEGORY_RESEARCH,
+        reasoning_trace=reasoning,
+        failure_factors=[],
+    )
 
 
-def _review_calculation(goal: str, completed_steps: list[dict]) -> dict[str, Any]:
-    score = 1.0
+def _review_calculation(completed_steps: list[dict]) -> dict[str, Any]:
+    reasoning: list[str] = ["Category=calculation: validating executable numeric output."]
+    factors: list[dict[str, Any]] = []
     issues: list[str] = []
-    recs: list[str] = []
 
-    stdout = ""
-    for st in completed_steps:
-        if st.get("tool") == "run_python":
-            tr = st.get("result")
-            if isinstance(tr, dict):
-                stdout = (tr.get("data") or {}).get("stdout") or ""
-                if stdout.strip():
-                    break
+    run_steps = _successful_steps(completed_steps, "run_python")
+    reasoning.append(f"Successful run_python steps: {len(run_steps)}.")
+    if not run_steps:
+        issue = "No successful run_python evidence"
+        issues.append(issue)
+        factors.append(_failure_factor("missing_runtime_calculation", 1.0, issue))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_CALCULATION,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    if not stdout.strip():
-        return {
-            "passed": False,
-            "score": 0.0,
-            "issues": ["Calculation stdout is empty."],
-            "recommendations": ["Re-run calculation code and ensure it prints the result."],
-            "category": CATEGORY_CALCULATION,
-        }
+    stdout = ((run_steps[-1].get("result") or {}).get("data") or {}).get("stdout", "")
+    stdout_len = len(stdout.strip()) if isinstance(stdout, str) else 0
+    reasoning.append(f"run_python stdout length: {stdout_len}.")
+    if not isinstance(stdout, str) or not stdout.strip():
+        issue = "run_python produced no meaningful stdout"
+        issues.append(issue)
+        factors.append(_failure_factor("empty_calculation_output", 0.8, issue))
+        return _quality_result(
+            passed=False,
+            score=0.2,
+            issues=issues,
+            category=CATEGORY_CALCULATION,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
 
-    # Fibonacci sanity check if requested.
-    gl = goal.lower()
-    if "fibonacci" in gl:
-        nums = re.findall(r"-?\d+", stdout)
-        ints = [int(x) for x in nums][:20]
-        if len(ints) < 10:
-            score = _quality_penalty(score, 0.5)
-            issues.append("Fibonacci output contains too few numbers.")
-        else:
-            # compute first len(ints) fibonacci
-            fib = [0, 1]
-            while len(fib) < len(ints):
-                fib.append(fib[-1] + fib[-2])
-            expected = fib[:20]
-            ok_prefix = ints[: min(20, len(ints))] == expected[: min(20, len(ints))]
-            if not ok_prefix:
-                score = _quality_penalty(score, 0.6)
-                issues.append("Fibonacci sequence does not match expected values.")
-
-    # general output length
-    if len(stdout.strip()) < 5:
-        score = _quality_penalty(score, 0.3)
-        issues.append("Calculation output is too short.")
-
-    passed = score >= 0.7
-    return {
-        "passed": passed,
-        "score": float(max(0.0, min(1.0, score))),
-        "issues": issues[:10],
-        "recommendations": recs[:10] or (["Ensure the calculation prints the expected output."] if not passed else []),
-        "category": CATEGORY_CALCULATION,
-    }
+    reasoning.append("Calculation output validated.")
+    return _quality_result(
+        passed=True,
+        score=0.82,
+        issues=[],
+        category=CATEGORY_CALCULATION,
+        reasoning_trace=reasoning,
+        failure_factors=[],
+    )
 
 
-def review_quality(goal: str, completed_steps: list[dict], attempted_steps: list[dict] | None = None) -> dict[str, Any]:
-    """Entry point.
+def _review_hybrid(completed_steps: list[dict]) -> dict[str, Any]:
+    reasoning: list[str] = ["Category=hybrid: validating read-transform-write flow."]
+    factors: list[dict[str, Any]] = []
+    issues: list[str] = []
 
-    Returns a structured quality report.
-    """
+    has_read = bool(_successful_steps(completed_steps, "file_read"))
+    writes = _successful_steps(completed_steps, "file_write")
+    reasoning.append(f"Successful file_read present: {has_read}.")
+    reasoning.append(f"Successful file_write count: {len(writes)}.")
+    if not has_read or not writes:
+        issue = "Hybrid task requires successful file_read and file_write"
+        issues.append(issue)
+        factors.append(_failure_factor("incomplete_hybrid_pipeline", 1.0, issue))
+        return _quality_result(
+            passed=False,
+            score=0.0,
+            issues=issues,
+            category=CATEGORY_HYBRID,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
+
+    out_path = str((writes[-1].get("tool_input") or {}).get("path", ""))
+    reasoning.append(f"Validating hybrid output artifact: {out_path}.")
+    ok, reason = _file_non_empty(out_path)
+    if not ok:
+        issues.append(reason)
+        factors.append(_failure_factor("hybrid_output_invalid", 0.9, reason))
+        return _quality_result(
+            passed=False,
+            score=0.1,
+            issues=issues,
+            category=CATEGORY_HYBRID,
+            reasoning_trace=reasoning,
+            failure_factors=factors,
+        )
+
+    reasoning.append("Hybrid pipeline output validated.")
+    return _quality_result(
+        passed=True,
+        score=0.8,
+        issues=[],
+        category=CATEGORY_HYBRID,
+        reasoning_trace=reasoning,
+        failure_factors=[],
+    )
+
+
+def _review_file(completed_steps: list[dict]) -> dict[str, Any]:
+    reasoning: list[str] = ["Category=file: validating direct file evidence."]
+    factors: list[dict[str, Any]] = []
+    issues: list[str] = []
+
+    writes = _successful_steps(completed_steps, "file_write")
+    reads = _successful_steps(completed_steps, "file_read")
+    reasoning.append(f"Successful file_write count: {len(writes)}.")
+    reasoning.append(f"Successful file_read count: {len(reads)}.")
+
+    if writes:
+        path = str((writes[-1].get("tool_input") or {}).get("path", ""))
+        reasoning.append(f"Validating written artifact: {path}.")
+        ok, reason = _file_non_empty(path)
+        if not ok:
+            issues.append(reason)
+            factors.append(_failure_factor("written_artifact_invalid", 1.0, reason))
+            return _quality_result(
+                passed=False,
+                score=0.0,
+                issues=issues,
+                category=CATEGORY_FILE,
+                reasoning_trace=reasoning,
+                failure_factors=factors,
+            )
+        reasoning.append("Written artifact validated.")
+        return _quality_result(
+            passed=True,
+            score=0.78,
+            issues=[],
+            category=CATEGORY_FILE,
+            reasoning_trace=reasoning,
+            failure_factors=[],
+        )
+
+    if reads:
+        content = (((reads[-1].get("result") or {}).get("data") or {}).get("content") or "")
+        content_len = len(content.strip()) if isinstance(content, str) else 0
+        reasoning.append(f"Read content length: {content_len}.")
+        if isinstance(content, str) and content.strip():
+            reasoning.append("Read evidence is non-empty.")
+            return _quality_result(
+                passed=True,
+                score=0.72,
+                issues=[],
+                category=CATEGORY_FILE,
+                reasoning_trace=reasoning,
+                failure_factors=[],
+            )
+
+    issue = "No meaningful file evidence"
+    issues.append(issue)
+    factors.append(_failure_factor("missing_file_evidence", 1.0, issue))
+    return _quality_result(
+        passed=False,
+        score=0.0,
+        issues=issues,
+        category=CATEGORY_FILE,
+        reasoning_trace=reasoning,
+        failure_factors=factors,
+    )
+
+
+def review_quality(
+    goal: str,
+    completed_steps: list[dict],
+    attempted_steps: list[dict] | None = None,
+) -> dict[str, Any]:
+    """Only authoritative final quality decision point."""
     attempted_steps = attempted_steps or completed_steps
     filenames = _goal_filenames(goal)
     category = _infer_category(goal, filenames, completed_steps)
 
     if category == CATEGORY_CODE:
-        # Prefer explicit filenames mentioned in goal.
-        candidates = [p for p in filenames if p.endswith(".py")]
-        if not candidates:
-            # fallback to file_write evidence
-            for st in completed_steps:
-                if st.get("tool") == "file_write":
-                    p = str(st.get("tool_input", {}).get("path", ""))
-                    if p.endswith(".py"):
-                        candidates.append(p)
-        if not candidates:
-            return {
-                "passed": False,
-                "score": 0.0,
-                "issues": ["No Python artifact found for code quality review."],
-                "recommendations": ["Save the generated Python code to a .py file."],
-                "category": category,
-            }
-
-        # Review the first candidate.
-        return _review_python_code(candidates[0], goal, completed_steps=completed_steps)
-
+        return _review_python_code(goal, completed_steps)
     if category == CATEGORY_RESEARCH:
-        return _review_research(goal, completed_steps=completed_steps, attempted_steps=attempted_steps)
-
+        return _review_research(goal, completed_steps)
     if category == CATEGORY_CALCULATION:
-        return _review_calculation(goal, completed_steps=completed_steps)
-
+        return _review_calculation(completed_steps)
+    if category == CATEGORY_HYBRID:
+        return _review_hybrid(completed_steps)
     if category == CATEGORY_FILE:
-        # Basic file quality.
-        candidates = [p for p in filenames if p and not p.endswith(".py")]
-        if not candidates:
-            return {
-                "passed": False,
-                "score": 0.0,
-                "issues": ["No output file evidence found."],
-                "recommendations": ["Write the requested file with content."],
-                "category": category,
-            }
-        p = candidates[0]
-        ok, reason = _file_non_empty(p)
-        if not ok:
-            return {
-                "passed": False,
-                "score": 0.0,
-                "issues": [reason],
-                "recommendations": ["Write a non-empty file."],
-                "category": category,
-            }
-        return {
-            "passed": True,
-            "score": 0.8,
-            "issues": [],
-            "recommendations": [],
-            "category": category,
-        }
+        return _review_file(completed_steps)
 
-    return {
-        "passed": False,
-        "score": 0.0,
-        "issues": ["Unknown goal category; quality review could not classify the artifact."],
-        "recommendations": ["Ensure the goal requests a code file, research summary, or calculation output."],
-        "category": category,
-    }
-
+    return _quality_result(
+        passed=False,
+        score=0.0,
+        issues=["Unknown goal category; insufficient evidence for completion"],
+        category=CATEGORY_UNKNOWN,
+        reasoning_trace=["Category=unknown: cannot establish reliable completion evidence."],
+        failure_factors=[_failure_factor("unknown_category", 1.0, "Goal classification failed")],
+    )

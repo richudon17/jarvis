@@ -15,7 +15,7 @@ def _resource_warning_cleanup():
     This fixture proactively closes the global sqlite connection (if any)
     and runs a GC cycle after each test to flush deterministically.
 
-    Note: the JARVIS codebase should already close connections via
+    Note: the AURUM codebase should already close connections via
     context managers. This fixture is a safety net to keep the test suite
     strict.
     """

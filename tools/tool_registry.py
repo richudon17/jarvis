@@ -1,6 +1,6 @@
 """
 tools/tool_registry.py
-All JARVIS tools live here.
+All AURUM tools live here.
 
 Phase 1 reliability: tools return structured dicts:
 {
@@ -11,12 +11,25 @@ Phase 1 reliability: tools return structured dicts:
 }
 """
 
-import os
+from __future__ import annotations
+
 import ast
+import os
 import re
 import subprocess
 import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
 from ddgs import DDGS
+
+from core.workspace import (
+    DEFAULT_GOAL_ID,
+    get_active_goal_id,
+    goal_workspace_dir,
+    resolve_workspace_path,
+    workspace_root,
+)
 
 
 # ──────────────────────────────────────────────
@@ -24,11 +37,15 @@ from ddgs import DDGS
 # ──────────────────────────────────────────────
 
 def _ok(data, metadata=None):
-    return {"ok": True, "data": data, "error": None, "metadata": metadata or {}}
+    meta = metadata or {}
+    meta.setdefault("tool_timestamp", datetime.now(timezone.utc).isoformat())
+    return {"ok": True, "data": data, "error": None, "metadata": meta}
 
 
 def _fail(error, metadata=None):
-    return {"ok": False, "data": None, "error": str(error), "metadata": metadata or {}}
+    meta = metadata or {}
+    meta.setdefault("tool_timestamp", datetime.now(timezone.utc).isoformat())
+    return {"ok": False, "data": None, "error": str(error), "metadata": meta}
 
 
 # ──────────────────────────────────────────────
@@ -128,6 +145,24 @@ def summarize_text(text: str, goal: str = "", max_items: int = 5) -> dict:
 # FILE OPERATIONS
 # ──────────────────────────────────────────────
 
+def _workspace_metadata(extra: dict | None = None) -> dict:
+    goal_id = get_active_goal_id()
+    goal_dir = goal_workspace_dir(goal_id)
+    data = {
+        "goal_id": goal_id,
+        "workspace_root": str(workspace_root()),
+        "workspace_dir": str(goal_dir),
+        "workspace_files": [],
+    }
+    try:
+        data["workspace_files"] = [str(goal_dir / rel) for rel in []]
+    except Exception:
+        data["workspace_files"] = []
+    if extra:
+        data.update(extra)
+    return data
+
+
 def _validate_python_source(code: str) -> str | None:
     if not code or not code.strip():
         return "Python syntax validation failed: generated code is empty."
@@ -142,76 +177,74 @@ def _validate_python_source(code: str) -> str | None:
 
 
 def file_read(path: str) -> dict:
-    path_expanded = os.path.expanduser(path)
     try:
-        if not os.path.exists(path_expanded):
-            return _fail("file not found", {"path": path})
-        if not os.path.isfile(path_expanded):
-            return _fail("not a file", {"path": path})
+        path_expanded = resolve_workspace_path(path)
+        if not path_expanded.exists():
+            return _fail("file not found", _workspace_metadata({"path": path}))
+        if not path_expanded.is_file():
+            return _fail("not a file", _workspace_metadata({"path": path}))
 
-        with open(path_expanded, "r", encoding="utf-8") as f:
-            content = f.read()
-        # Verify actually read
+        content = path_expanded.read_text(encoding="utf-8")
         if content is None:
-            return _fail("read returned no content", {"path": path})
+            return _fail("read returned no content", _workspace_metadata({"path": path}))
 
         return _ok(
             {"content": content},
-            {"path": path, "bytes_read": len(content.encode('utf-8'))},
+            _workspace_metadata({"path": path, "bytes_read": len(content.encode("utf-8"))}),
         )
     except Exception as e:
-        return _fail(e, {"path": path})
+        return _fail(e, _workspace_metadata({"path": path}))
 
 
 def file_write(path: str, content: str) -> dict:
-    path_expanded = os.path.expanduser(path)
     try:
         if content is None or not str(content).strip():
-            return _fail("no content provided", {"path": path})
+            return _fail("no content provided", _workspace_metadata({"path": path}))
 
-        if path_expanded.endswith(".py"):
+        path_expanded = resolve_workspace_path(path)
+
+        if str(path_expanded).endswith(".py"):
             validation_error = _validate_python_source(content)
             if validation_error:
-                return _fail(validation_error, {"path": path})
+                return _fail(validation_error, _workspace_metadata({"path": path}))
 
-        os.makedirs(os.path.dirname(path_expanded) or ".", exist_ok=True)
-        with open(path_expanded, "w", encoding="utf-8") as f:
-            f.write(content)
+        path_expanded.parent.mkdir(parents=True, exist_ok=True)
+        path_expanded.write_text(content, encoding="utf-8")
 
-        if not os.path.isfile(path_expanded):
-            return _fail("file was not created", {"path": path})
+        if not path_expanded.is_file():
+            return _fail("file was not created", _workspace_metadata({"path": path}))
 
-        bytes_written = os.path.getsize(path_expanded)
+        bytes_written = path_expanded.stat().st_size
         if bytes_written == 0:
-            return _fail("file is empty after writing", {"path": path})
+            return _fail("file is empty after writing", _workspace_metadata({"path": path}))
 
         return _ok(
-            {
-                "path": path,
-                "bytes_written": bytes_written,
-            },
-            {
-                "path": path,
-                "bytes_written": bytes_written,
-                "python_syntax_valid": path_expanded.endswith(".py"),
-            },
+            {"path": str(path_expanded), "bytes_written": bytes_written},
+            _workspace_metadata(
+                {
+                    "path": path,
+                    "resolved_path": str(path_expanded),
+                    "bytes_written": bytes_written,
+                    "python_syntax_valid": str(path_expanded).endswith(".py"),
+                }
+            ),
         )
     except Exception as e:
-        return _fail(e, {"path": path})
+        return _fail(e, _workspace_metadata({"path": path}))
 
 
 def file_list(directory: str = ".") -> dict:
-    directory_expanded = os.path.expanduser(directory)
     try:
-        if not os.path.isdir(directory_expanded):
-            return _fail("not a directory", {"directory": directory})
+        directory_expanded = resolve_workspace_path(directory)
+        if not directory_expanded.is_dir():
+            return _fail("not a directory", _workspace_metadata({"directory": directory}))
         entries = os.listdir(directory_expanded)
         return _ok(
             {"entries": entries},
-            {"directory": directory, "num_entries": len(entries)},
+            _workspace_metadata({"directory": directory, "num_entries": len(entries)}),
         )
     except Exception as e:
-        return _fail(e, {"directory": directory})
+        return _fail(e, _workspace_metadata({"directory": directory}))
 
 
 # ──────────────────────────────────────────────
@@ -237,21 +270,28 @@ def _looks_interactive_or_gui(code: str) -> tuple[bool, str | None]:
 
 def run_python(code: str) -> dict:
     """Execute Python code in a subprocess and return structured output."""
+    tmpfile = None
     try:
         if code is None:
-            return _fail("no code", {})
+            return _fail("no code", _workspace_metadata())
 
         blocked, reason = _looks_interactive_or_gui(code)
         if blocked:
             return _fail(
-                "execution blocked", {"blocked_reason": reason, "timeout": False}
+                "execution blocked", _workspace_metadata({"blocked_reason": reason, "timeout": False})
             )
 
         validation_error = _validate_python_source(code)
         if validation_error:
-            return _fail(validation_error, {})
+            return _fail(validation_error, _workspace_metadata())
 
-        with tempfile.NamedTemporaryFile(suffix=".py", mode="w", delete=False) as f:
+        goal_dir = goal_workspace_dir(get_active_goal_id())
+        with tempfile.NamedTemporaryFile(
+            suffix=".py",
+            mode="w",
+            delete=False,
+            dir=str(goal_dir),
+        ) as f:
             f.write(code)
             tmpfile = f.name
 
@@ -261,12 +301,14 @@ def run_python(code: str) -> dict:
                 capture_output=True,
                 text=True,
                 timeout=30,
+                cwd=str(goal_dir),
             )
         finally:
-            try:
-                os.unlink(tmpfile)
-            except Exception:
-                pass
+            if tmpfile:
+                try:
+                    os.unlink(tmpfile)
+                except Exception:
+                    pass
 
         return _ok(
             {
@@ -274,17 +316,21 @@ def run_python(code: str) -> dict:
                 "stderr": result.stderr or "",
                 "exit_code": result.returncode,
             },
-            {
-                "exit_code": result.returncode,
-                "timeout": False,
-                "stdout_len": len((result.stdout or "").encode("utf-8")),
-                "stderr_len": len((result.stderr or "").encode("utf-8")),
-            },
+            _workspace_metadata(
+                {
+                    "goal_id": get_active_goal_id(),
+                    "tmpfile": tmpfile,
+                    "exit_code": result.returncode,
+                    "timeout": False,
+                    "stdout_len": len((result.stdout or "").encode("utf-8")),
+                    "stderr_len": len((result.stderr or "").encode("utf-8")),
+                }
+            ),
         )
     except subprocess.TimeoutExpired:
-        return _fail("timeout", {"timeout": True})
+        return _fail("timeout", _workspace_metadata({"timeout": True}))
     except Exception as e:
-        return _fail(e, {})
+        return _fail(e, _workspace_metadata())
 
 
 # ──────────────────────────────────────────────
@@ -367,4 +413,3 @@ def execute_tool(tool_name: str, params: dict) -> dict:
         "unknown tool",
         {"tool": tool_name, "available": list(TOOLS.keys())},
     )
-

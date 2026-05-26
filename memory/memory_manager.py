@@ -11,7 +11,7 @@ import sqlite3
 import os
 from datetime import datetime, timezone
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "jarvis_state.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "aurum_state.db")
 
 
 from contextlib import contextmanager

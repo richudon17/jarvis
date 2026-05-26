@@ -1,4 +1,4 @@
-"""Deterministic recovery rules for JARVIS Phase 1.
+"""Deterministic recovery rules for AURUM Phase 1.
 
 This module sits between:
 - core/executor (tool execution + structured results)
@@ -32,6 +32,40 @@ def _get_result_ok(step_result: Any) -> bool:
     if isinstance(step_result, dict):
         return bool(step_result.get("ok", False))
     return False
+
+
+def _is_pure_read_goal(goal: str) -> bool:
+    gl = goal.lower()
+    return any(k in gl for k in ("read", "show", "display", "open")) and not any(
+        k in gl for k in ("create", "write", "make", "save", "generate", "replace", "overwrite")
+    )
+
+
+def _recover_prior_workspace_file(path: str) -> str:
+    try:
+        from core.workspace import get_active_goal_id, validate_user_path, workspace_root
+
+        candidate = validate_user_path(path)
+        root = workspace_root()
+        active_goal = get_active_goal_id()
+        matches = []
+        for goal_dir in root.iterdir():
+            if not goal_dir.is_dir() or goal_dir.name == active_goal:
+                continue
+            target = (goal_dir / candidate).resolve()
+            if not target.is_file():
+                continue
+            if root not in target.parents:
+                continue
+            matches.append(target)
+        if not matches:
+            return ""
+        latest = max(matches, key=lambda p: p.stat().st_mtime)
+        if latest.stat().st_size > 1024 * 1024:
+            return ""
+        return latest.read_text(encoding="utf-8")
+    except Exception:
+        return ""
 
 
 def deterministic_repair(
@@ -180,6 +214,28 @@ def deterministic_repair(
                         "tool_input": {"path": path, "content": ""}
                     }],
                 }
+            if _is_pure_read_goal(goal):
+                recovered_content = _recover_prior_workspace_file(path)
+                if recovered_content.strip():
+                    return {
+                        "handled": True,
+                        "action": "retry",
+                        "reason": f"Recovered prior workspace artifact: {path}",
+                        "new_steps": [
+                            {
+                                "step_index": step.get("step_index"),
+                                "description": f"Import prior artifact {path}",
+                                "tool": "file_write",
+                                "tool_input": {"path": path, "content": recovered_content},
+                            },
+                            {
+                                "step_index": step.get("step_index"),
+                                "description": f"Read {path}",
+                                "tool": "file_read",
+                                "tool_input": {"path": path},
+                            },
+                        ],
+                    }
             return {
                 "handled": True,
                 "action": "stop",
@@ -377,7 +433,7 @@ def _generate_minimal_content(goal: str, path: str) -> str | None:
 import json
 from pathlib import Path
 
-DATA_FILE = Path.home() / ".jarvis_todo.json"
+DATA_FILE = Path.home() / ".aurum_todo.json"
 
 def main():
     tasks = []

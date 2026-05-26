@@ -1,4 +1,4 @@
-# JARVIS Phase 1 - Test & Fix Summary
+# AURUM Phase 1 - Test & Fix Summary
 
 ## Quick Overview
 Ran 21 comprehensive tests, found & fixed 5 bugs. Recent Phase 1 hardening added runtime grounding, artifact metadata, and persistence improvements.
@@ -105,8 +105,8 @@ All deterministic unit tests pass locally. Runtime-grounding checks (smoke tests
 
 - **Configurable thresholds (via env vars)**
   - `core/orchestrator.py` now reads:
-    - `JARVIS_QUALITY_THRESHOLD` (default `0.60`)
-    - `JARVIS_SEMANTIC_CONFIDENCE_MIN` (default `0.50`)
+    - `AURUM_QUALITY_THRESHOLD` (default `0.60`)
+    - `AURUM_SEMANTIC_CONFIDENCE_MIN` (default `0.50`)
 
 - **Expanded validation dataset + grid search**
   - `test_threshold_calibration.py` rewritten to build a larger deterministic validation set (code/research/calculation + runtime-evidence and adversarial spoof cases)

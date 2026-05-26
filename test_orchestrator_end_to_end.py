@@ -47,7 +47,7 @@ def test_orchestrator_end_to_end_smoke_and_persistence(tmp_path, monkeypatch):
             return {"ok": True, "data": {"summary": tool_input.get("summary")}, "error": None, "metadata": {"done": True}}
         return {"ok": False, "data": None, "error": "unknown tool", "metadata": {}}
 
-    monkeypatch.setattr("tools.tool_registry.execute_tool", fake_execute_tool)
+    monkeypatch.setattr("core.executor.execute_tool", fake_execute_tool)
 
     orch = Orchestrator()
     gid = "test-e2e-1"

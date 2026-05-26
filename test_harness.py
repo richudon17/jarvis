@@ -1,6 +1,6 @@
 """
 test_harness.py
-Comprehensive stress testing of JARVIS across 15 failure mode categories.
+Comprehensive stress testing of AURUM across 15 failure mode categories.
 """
 
 import sys
@@ -9,7 +9,7 @@ import traceback
 from pathlib import Path
 from datetime import datetime
 
-# Add jarvis to path
+# Add aurum to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from core.orchestrator import Orchestrator
@@ -152,7 +152,7 @@ class Harness:
     def run_all(self):
         """Run all tests across all categories."""
         print("\n" + "=" * 80)
-        print("JARVIS COMPREHENSIVE TEST HARNESS - PHASE 1")
+        print("AURUM COMPREHENSIVE TEST HARNESS - PHASE 1")
         print("=" * 80)
 
         for category, goals in TESTS.items():

@@ -1,87 +1,109 @@
-"""\
-core/evaluator.py
+"""Observation layer for step execution.
 
-Phase 1 reliability: step evaluation must be structured and deterministic.
-
-A step is evaluated using tool result schema:
-{
-  "ok": bool,
-  "data": ...,
-  "error": str | None,
-  "metadata": dict
-}
+This module is intentionally non-authoritative:
+- It describes what happened in a tool call.
+- It extracts structured observations and issues.
+- It does NOT decide pass/fail for goal completion.
 """
 
 from __future__ import annotations
 
 
+def _normalize_result(tool_result) -> dict:
+    if isinstance(tool_result, dict):
+        return {
+            "ok": bool(tool_result.get("ok", False)),
+            "data": tool_result.get("data"),
+            "error": tool_result.get("error"),
+            "metadata": tool_result.get("metadata") or {},
+        }
+    return {
+        "ok": False,
+        "data": None,
+        "error": "tool produced non-structured result",
+        "metadata": {"legacy": True},
+    }
+
+
+def _summarize_output(tool: str, data) -> str:
+    if data is None:
+        return f"{tool}: no output data"
+    if isinstance(data, dict):
+        if "stdout" in data:
+            stdout = str(data.get("stdout") or "").strip()
+            return f"{tool}: stdout_len={len(stdout)}"
+        if "content" in data:
+            content = str(data.get("content") or "").strip()
+            return f"{tool}: content_len={len(content)}"
+        if "entries" in data and isinstance(data.get("entries"), list):
+            return f"{tool}: entries={len(data.get('entries', []))}"
+        if "summary" in data:
+            summary = str(data.get("summary") or "").strip()
+            return f"{tool}: summary_len={len(summary)}"
+        return f"{tool}: keys={sorted(data.keys())}"
+    return f"{tool}: output_type={type(data).__name__}"
+
+
 def evaluate_step(step: dict) -> dict:
-    """Assess a completed step using structured result fields."""
-    status = step.get("status", "")
-    
-    # Done steps always pass regardless of result
-    if status == "done":
-        return {**step, "evaluation": {"passed": True, "reason": "Task marked complete."}}
-    
-    tool_result = step.get("result")
+    """Attach structured observations to a completed step."""
+    status = step.get("status", "unknown")
+    tool = step.get("tool", "")
+    normalized = _normalize_result(step.get("result"))
 
-    # Handle missing/None result as tool failure
-    if tool_result is None:
-        return {
-            **step,
-            "evaluation": {
-                "passed": False,
-                "reason": "tool produced no result",
-            },
-        }
+    data = normalized.get("data")
+    metadata = normalized.get("metadata") or {}
+    issues: list[str] = []
+    detected_errors: list[str] = []
+    anomalies: list[str] = []
 
-    # Normalize legacy: if result is a string, treat non-empty as ok.
-    if not isinstance(tool_result, dict):
-        ok = bool(str(tool_result).strip())
-        err = None if ok else str(tool_result)
-        tool_result = {"ok": ok, "data": None, "error": err, "metadata": {"legacy": True}}
+    if not normalized.get("ok", False):
+        err = normalized.get("error") or "tool reported failure"
+        issues.append(err)
+        detected_errors.append(str(err))
 
-    if not tool_result.get("ok", False):
-        return {
-            **step,
-            "evaluation": {
-                "passed": False,
-                "reason": tool_result.get("error") or "tool reported failure",
-            },
-        }
-
-    # passed tool result => now apply a minimal deterministic sanity check
-    data = tool_result.get("data")
-    metadata = tool_result.get("metadata") or {}
-
-    # file_write: require non-empty bytes_written (if present)
-    if step.get("tool") == "file_write":
+    if tool == "file_write":
         bw = metadata.get("bytes_written")
         if isinstance(bw, int) and bw <= 0:
-            return {**step, "evaluation": {"passed": False, "reason": "file_write produced empty file"}}
+            issue = "file_write produced empty file"
+            issues.append(issue)
+            anomalies.append(issue)
 
-    # file_read: require content non-empty (if present)
-    if step.get("tool") == "file_read":
+    if tool == "file_read":
         content = (data or {}).get("content")
         if isinstance(content, str) and not content.strip():
-            return {**step, "evaluation": {"passed": False, "reason": "file_read returned empty content"}}
+            issue = "file_read returned empty content"
+            issues.append(issue)
+            anomalies.append(issue)
 
-    # run_python: require exit_code==0 and/or stdout non-empty when output is expected
-    if step.get("tool") == "run_python":
+    if tool == "run_python":
         exit_code = metadata.get("exit_code")
-        stdout = (data or {}).get("stdout")
         if exit_code is not None and exit_code != 0:
-            return {**step, "evaluation": {"passed": False, "reason": f"run_python nonzero exit_code={exit_code}"}}
-        if isinstance(stdout, str) and stdout == "":
-            # still allow empty stdout if exit_code==0; caller/verifier will decide for calculation goals
-            pass
+            issue = f"run_python nonzero exit_code={exit_code}"
+            issues.append(issue)
+            detected_errors.append(issue)
 
-    if step.get("tool") in ("web_search", "summarize_text"):
-        # Require returned data to exist
-        if data is None:
-            return {**step, "evaluation": {"passed": False, "reason": "tool returned no data"}}
+    if tool in ("web_search", "summarize_text") and data is None:
+        issue = "tool returned no data"
+        issues.append(issue)
+        anomalies.append(issue)
 
-    return {**step, "evaluation": {"passed": True, "reason": "Tool ok"}}
+    observation = {
+        "tool": tool,
+        "status": status,
+        "ok": bool(normalized.get("ok", False)),
+        "error": normalized.get("error"),
+        "issues": issues,
+        "detected_errors": detected_errors,
+        "anomalies": anomalies,
+        "output_summary": _summarize_output(tool, data),
+        "has_data": data is not None,
+    }
+
+    return {
+        **step,
+        "result": normalized,
+        "observation": observation,
+    }
 
 
 def check_loop_detection(step_history: list, current_step: dict, threshold: int = 3) -> bool:
@@ -95,4 +117,3 @@ def check_loop_detection(step_history: list, current_step: dict, threshold: int 
         if s.get("tool") == tool and str(s.get("tool_input", {})) == tool_input
     )
     return count >= threshold
-

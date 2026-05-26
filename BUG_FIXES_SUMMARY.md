@@ -1,4 +1,4 @@
-# JARVIS Phase 1 Bug Fixes - Executive Summary
+# AURUM Phase 1 Bug Fixes - Executive Summary
 
 ## Bugs Fixed: 5 Critical Issues
 

@@ -1,4 +1,4 @@
-"""Observation system for JARVIS Phase 2.
+"""Observation system for AURUM Phase 2.
 
 Defines the unified observation schema and provides utilities for
 processing, comparing, and storing observations from the environment.

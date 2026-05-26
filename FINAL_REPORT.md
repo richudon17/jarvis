@@ -1,10 +1,10 @@
 ---
-title: "JARVIS Phase 1 Testing Campaign - Final Report"
+title: "AURUM Phase 1 Testing Campaign - Final Report"
 date: 2026-05-16
 status: "COMPLETE ✅"
 ---
 
-# JARVIS Phase 1 - Comprehensive Testing & Bug Fixes
+# AURUM Phase 1 - Comprehensive Testing & Bug Fixes
 
 ## Campaign Overview
 

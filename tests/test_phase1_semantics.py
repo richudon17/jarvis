@@ -136,7 +136,7 @@ def test_evaluator_uses_structured_ok_error_not_substrings():
 
 def test_placeholder_replacement_does_not_corrupt_fstrings():
     # Avoid importing orchestrator (planner requires GROQ_API_KEY).
-    # Regression intent: '{score}' matches JARVIS placeholder pattern and must not be
+    # Regression intent: '{score}' matches AURUM placeholder pattern and must not be
     # treated as a file path or otherwise replaced into something else.
     import re
 

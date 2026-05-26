@@ -1,7 +1,7 @@
 """
 tests/test_reliability_stress.py
 
-Comprehensive reliability and stress testing for JARVIS Phase 1.
+Comprehensive reliability and stress testing for AURUM Phase 1.
 
 This test suite aggressively tests:
 1. Planner edge cases (empty responses, malformed JSON, API failures)
@@ -200,6 +200,23 @@ class TestPlannerEdgeCases:
         assert _filename_from_goal("Create app.py") == "app.py"
         assert _filename_from_goal("Write to src/main.py") == "src/main.py"
         assert _filename_from_goal("Calculate 2+2") == "output.py"  # default
+
+    def test_plain_file_creation_plan_uses_target_filename_not_output_py(self):
+        """Plain file goals should route directly to file_write with requested filename/content."""
+        from core.planner import create_plan
+
+        goal = "create a file called hello.txt with hello world"
+        plan = create_plan(goal)
+        steps = plan.get("steps", [])
+
+        assert steps, "Expected deterministic plain-file plan."
+        assert steps[0]["tool"] == "file_write"
+        assert steps[0]["tool_input"]["path"] == "hello.txt"
+        assert steps[0]["tool_input"]["content"] == "hello world"
+        assert all(
+            str((s.get("tool_input") or {}).get("path", "")) != "output.py"
+            for s in steps
+        )
 
 
 # ──────────────────────────────────────────────

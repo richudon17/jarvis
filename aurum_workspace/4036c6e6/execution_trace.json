@@ -1,0 +1,173 @@
+{
+  "goal_id": "4036c6e6",
+  "goal": "Create artifact",
+  "trace_started_at": "2026-05-26T12:27:26.074566+00:00",
+  "trace_ended_at": "2026-05-26T12:27:26.077779+00:00",
+  "final_status": "failed",
+  "final_reason": "Plan exhausted",
+  "timeline": [
+    {
+      "event_index": 0,
+      "event_type": "goal_started",
+      "timestamp": "2026-05-26T12:27:26.074570+00:00",
+      "goal_id": "4036c6e6",
+      "goal": "Create artifact",
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/4036c6e6"
+    },
+    {
+      "event_index": 1,
+      "event_type": "environment_scanned",
+      "timestamp": "2026-05-26T12:27:26.076008+00:00",
+      "summary": "Working directory is empty."
+    },
+    {
+      "event_index": 2,
+      "event_type": "plan_created",
+      "timestamp": "2026-05-26T12:27:26.076013+00:00",
+      "plan_summary": "minimal",
+      "step_count": 2,
+      "step_indexes": [
+        0,
+        1
+      ]
+    },
+    {
+      "event_index": 3,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T12:27:26.076017+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "artifact.txt",
+        "content": "ok"
+      }
+    },
+    {
+      "event_index": 4,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T12:27:26.076553+00:00",
+      "step_index": 0,
+      "tool": "file_write",
+      "input": {
+        "path": "artifact.txt",
+        "content": "ok"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "path": "/Users/richu/Downloads/jarvis/aurum_workspace/4036c6e6/artifact.txt",
+          "bytes_written": 2
+        },
+        "error": null,
+        "metadata": {
+          "goal_id": "4036c6e6",
+          "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
+          "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/4036c6e6",
+          "workspace_files": [],
+          "path": "artifact.txt",
+          "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/4036c6e6/artifact.txt",
+          "bytes_written": 2,
+          "python_syntax_valid": false,
+          "tool_timestamp": "2026-05-26T12:27:26.076544+00:00"
+        }
+      },
+      "status": "success",
+      "observation": {
+        "tool": "file_write",
+        "status": "success",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "file_write: keys=['bytes_written', 'path']",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 5,
+      "event_type": "step_started",
+      "timestamp": "2026-05-26T12:27:26.076892+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      }
+    },
+    {
+      "event_index": 6,
+      "event_type": "step_finished",
+      "timestamp": "2026-05-26T12:27:26.077291+00:00",
+      "step_index": 1,
+      "tool": "done",
+      "input": {
+        "summary": "done"
+      },
+      "output": {
+        "ok": true,
+        "data": {
+          "summary": "done"
+        },
+        "error": null,
+        "metadata": {
+          "done": true
+        }
+      },
+      "status": "done",
+      "observation": {
+        "tool": "done",
+        "status": "done",
+        "ok": true,
+        "error": null,
+        "issues": [],
+        "detected_errors": [],
+        "anomalies": [],
+        "output_summary": "done: summary_len=4",
+        "has_data": true
+      }
+    },
+    {
+      "event_index": 7,
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-26T12:27:26.077767+00:00",
+      "passed": false,
+      "category": "file",
+      "score": 0.0,
+      "issues": [
+        "nope"
+      ],
+      "reasoning_trace": [],
+      "failure_factors": [],
+      "decision_reason": "Quality check failed: nope",
+      "advisory": {
+        "verify_status": "ok",
+        "verify_hints": [],
+        "verify_confidence": 0.95,
+        "semantic_status": "ok",
+        "semantic_hints": [],
+        "semantic_confidence": 0.95
+      }
+    },
+    {
+      "event_index": 8,
+      "event_type": "replan_triggered",
+      "timestamp": "2026-05-26T12:27:26.077774+00:00",
+      "trigger": "quality_failure",
+      "attempt": 1,
+      "reason": "Quality check failed: nope"
+    },
+    {
+      "event_index": 9,
+      "event_type": "replan_result",
+      "timestamp": "2026-05-26T12:27:26.077776+00:00",
+      "attempt": 1,
+      "step_count": 0
+    },
+    {
+      "event_index": 10,
+      "event_type": "goal_failed",
+      "timestamp": "2026-05-26T12:27:26.077778+00:00",
+      "reason": "Plan exhausted"
+    }
+  ]
+}

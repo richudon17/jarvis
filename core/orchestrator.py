@@ -1,130 +1,105 @@
-"""
-core/orchestrator.py
-The brain of JARVIS. Central control loop that:
-1. Receives a goal
-2. Plans steps
-3. Executes each step
-4. Evaluates results
-5. Replans on failure
-6. Persists state throughout
-7. Completes or declares failure after limits
+"""Core orchestration loop for AURUM.
+
+Decision model:
+- `core/quality.py` is the only authority for final completion.
+- evaluator/verifier/semantic verifier are observation/advisory only.
+- deterministic repair may suggest step fixes but does not decide completion.
 """
 
-import uuid
+from __future__ import annotations
+
+import json
 import re
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
-import os
-
-from core.planner import create_plan, replan, _call_llm
+from core.workspace import (
+    clear_execution_context,
+    list_workspace_files,
+    set_execution_context,
+    workspace_context_label,
+    goal_workspace_dir,
+)
+from core.planner import create_plan, replan
 from core.executor import run_step
 from core.evaluator import evaluate_step, check_loop_detection
 from core.smoke_test import smoke_test_python_file
-from core.verifier import verify_goal
 from core.deterministic_repair import deterministic_repair
-from core.quality import review_quality
+from core.verifier import verify_goal
 from core.semantic_verifier import semantic_verify_goal
-
-
+from core.quality import review_quality
 
 from memory.memory_manager import MemoryManager
 from state.persistence import (
-    init_db, save_goal, update_goal_status, save_step, load_steps, reset_orphaned_goals
+    init_db,
+    save_goal,
+    update_goal_status,
+    save_step,
+    reset_orphaned_goals,
 )
 
 console = Console()
 
-MAX_RETRIES = 3
 MAX_STEPS = 20
 MAX_REPLAN_ATTEMPTS = 2
-MAX_REPAIR_ATTEMPTS = 2
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}]+\}")
 KNOWN_PLACEHOLDERS = ("{search_results}", "{results}", "{output}", "{summary}")
 
-# Patterns that should NEVER be treated as placeholders (f-strings, format strings, etc.)
-PLACEHOLDER_EXCLUSIONS = [
-    re.compile(r"^\'[^\']*\'$"),  # Single-quoted strings
-    re.compile(r'^\"[^\"]*\"$'),  # Double-quoted strings
-    re.compile(r"^[^{}]*\{[^{}]+\}[^{}]*$"),  # Strings containing f-string patterns mixed with other text
-]
 
-# Maximum context length to prevent memory issues
-MAX_CONTEXT_LENGTH = 50000
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
-
-def _env_float(name: str, default: float) -> float:
-    v = os.getenv(name)
-    if v is None or str(v).strip() == "":
-        return default
-    try:
-        return float(v)
-    except Exception:
-        return default
-
-
-QUALITY_THRESHOLD = _env_float("JARVIS_QUALITY_THRESHOLD", 0.60)
-SEMANTIC_CONFIDENCE_MIN = _env_float("JARVIS_SEMANTIC_CONFIDENCE_MIN", 0.50)
+def _trace_safe(value: Any):
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, dict):
+        return {str(k): _trace_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_trace_safe(v) for v in value]
+    return repr(value)
 
 
-
-def _previous_context(step_results: dict) -> str:
-    """Build context from step results, truncating if necessary."""
-    parts = []
-    total_length = 0
-    
-    for i, r in step_results.items():
-        part = f"Step {i} result:\n{r}"
-        if total_length + len(part) > MAX_CONTEXT_LENGTH:
-            # Truncate the last part if we're near the limit
-            remaining = MAX_CONTEXT_LENGTH - total_length
-            if remaining > 50:  # Only add if there's meaningful space
-                parts.append(part[:remaining] + "...[truncated]")
-            break
-        parts.append(part)
-        total_length += len(part)
-    
-    return "\n\n".join(parts)
-
-
-def _latest_context(step_results: dict) -> str:
-    if not step_results:
-        return ""
-    return next(reversed(step_results.values()))
+def _append_trace(events: list[dict[str, Any]], event_type: str, **payload) -> None:
+    event = {
+        "event_index": len(events),
+        "event_type": event_type,
+        "timestamp": _utc_now(),
+    }
+    event.update(_trace_safe(payload))
+    events.append(event)
 
 
 def _is_placeholder_value(value: str) -> bool:
-    """Check if a value is a placeholder that should be replaced.
-    
-    Excludes quoted strings and f-string patterns to prevent corruption.
-    """
     if not isinstance(value, str):
         return False
-    
     stripped = value.strip()
     lowered = stripped.lower()
-    
-    # Check if it matches any known placeholder
+
     if any(token in lowered for token in KNOWN_PLACEHOLDERS):
         return True
-    
-    # Check if it's a pure placeholder pattern (entire string is {something})
-    if PLACEHOLDER_PATTERN.fullmatch(stripped) is not None:
-        # Exclude if it looks like an f-string variable (short, simple names)
-        inner = stripped[1:-1]  # Remove { and }
-        if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', inner):
-            # This looks like an f-string variable like {x} or {score}
-            # Only treat as placeholder if it's a known one
-            return False
-        
-        return True
-    
-    return False
+
+    if PLACEHOLDER_PATTERN.fullmatch(stripped) is None:
+        return False
+
+    inner = stripped[1:-1]
+    # Exclude simple variable tokens such as "{x}" or "{score}".
+    if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", inner):
+        return False
+    return True
 
 
-def _replace_placeholders(value, previous_context: str, latest_context: str = "", prefer_latest: bool = False):
+def _replace_placeholders(
+    value,
+    previous_context: str,
+    latest_context: str = "",
+    prefer_latest: bool = False,
+):
     if not previous_context:
         return value
     if isinstance(value, str) and _is_placeholder_value(value):
@@ -137,7 +112,7 @@ def _replace_placeholders(value, previous_context: str, latest_context: str = ""
                 item,
                 previous_context,
                 latest_context,
-                prefer_latest
+                prefer_latest,
             )
             for key, item in value.items()
         }
@@ -149,24 +124,42 @@ def _replace_placeholders(value, previous_context: str, latest_context: str = ""
     return value
 
 
-def _resolve_step_placeholders(
-    step: dict,
-    previous_context: str,
-    latest_context: str = "",
-    previous_tool: str = ""
-) -> dict:
-    tool_input = step.get("tool_input", {})
-    prefer_latest = step.get("tool") == "file_write" and previous_tool == "summarize_text"
-    if (
-        step.get("tool") == "file_write"
-        and str(tool_input.get("path", "")).endswith(".py")
-        and "content" in tool_input
-    ):
-        return {
-            key: value if key == "content" else _replace_placeholders(value, previous_context, latest_context, prefer_latest)
-            for key, value in tool_input.items()
-        }
-    return _replace_placeholders(tool_input, previous_context, latest_context, prefer_latest)
+def _latest_completed_output(completed_steps: list[dict]) -> str:
+    for completed in reversed(completed_steps):
+        result = completed.get("result") or {}
+        if not isinstance(result, dict):
+            continue
+        data = result.get("data") or {}
+        if isinstance(data, dict):
+            for key in ("content", "stdout", "summary"):
+                value = data.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+        if isinstance(data, str) and data.strip():
+            return data.strip()
+    return ""
+
+
+def _failure_fingerprint(step: dict, observed: dict) -> str:
+    tool = step.get("tool", "")
+    tool_input = str(step.get("tool_input", {}))
+    issues = "|".join((observed.get("observation", {}) or {}).get("issues", []))
+    return f"{tool}|{tool_input}|{issues}"
+
+
+def _quality_failure_reason(quality: dict, advisory: dict | None = None) -> str:
+    issues = quality.get("issues", []) or []
+    if issues:
+        return f"Quality check failed: {', '.join(str(i) for i in issues)}"
+
+    hints: list[str] = []
+    if advisory:
+        for key in ("verify_hints", "semantic_hints"):
+            hints.extend(advisory.get(key, []) or [])
+    if hints:
+        return f"Quality check failed; advisory hints: {', '.join(hints[:3])}"
+
+    return "Quality check failed."
 
 
 class Orchestrator:
@@ -175,281 +168,351 @@ class Orchestrator:
         init_db()
         self.memory = MemoryManager()
 
-    def run(self, goal: str, goal_id: str = None) -> str:
-        """Main entry point. Accepts a goal string, runs until complete or exhausted."""
+    def run(self, goal: str, goal_id: str | None = None) -> str:
         goal_id = goal_id or str(uuid.uuid4())[:8]
+        set_execution_context(goal_id, goal)
+        goal_dir = goal_workspace_dir(goal_id)
 
-        console.print(Panel(f"[bold cyan]🤖 JARVIS[/bold cyan]\n[white]{goal}[/white]",
-                            title="New Goal", border_style="cyan"))
+        state = {
+            "completed": [],
+            "attempted": [],
+            "step_results": {},
+            "replan_count": 0,
+            "failure_fingerprints": set(),
+        }
 
-        # Persist the goal
-        save_goal(goal_id, goal, status="running")
-        self.memory.short.set("goal", goal)
-        self.memory.short.set("goal_id", goal_id)
+        trace_events: list[dict[str, Any]] = []
+        trace_started_at = _utc_now()
+        trace_path = goal_dir / "execution_trace.json"
+        trace_flushed = False
+        final_status = "running"
+        final_reason = ""
 
-        # Generate initial plan
-        console.print("\n[yellow]⚙  Planning...[/yellow]")
-        plan = create_plan(goal, memory=self.memory)
-        steps = plan.get("steps", [])
-        console.print(f"[green]✓ Plan ready:[/green] {plan.get('plan_summary', '')}")
-        for s in steps:
-            console.print(f"  [dim]{s['step_index']}. {s['description']} → [{s['tool']}][/dim]")
+        def flush_trace(status: str, reason: str) -> None:
+            nonlocal trace_flushed, final_status, final_reason
+            final_status = status
+            final_reason = reason
+            payload = {
+                "goal_id": goal_id,
+                "goal": goal,
+                "trace_started_at": trace_started_at,
+                "trace_ended_at": _utc_now(),
+                "final_status": final_status,
+                "final_reason": final_reason,
+                "timeline": trace_events,
+            }
+            trace_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            self.memory.short.set("execution_trace_path", str(trace_path))
+            trace_flushed = True
 
-        completed = []
-        attempted = []
-        step_results = {}
-        retry_count = 0
-        replan_count = 0
-        repair_count = 0
-        total_steps = 0
-        terminal_success = False
-        stop_reason = ""
+        _append_trace(
+            trace_events,
+            "goal_started",
+            goal_id=goal_id,
+            goal=goal,
+            workspace=str(goal_dir),
+        )
 
-        # ── Main execution loop ──
-        while steps and total_steps < MAX_STEPS:
-            step = steps.pop(0)
-            total_steps += 1
-            step["tool_input"] = _resolve_step_placeholders(
-                step,
-                _previous_context(step_results),
-                _latest_context(step_results),
-                completed[-1].get("tool", "") if completed else ""
+        try:
+            console.print(Panel(goal, title="Goal"))
+            console.print(f"[dim]{workspace_context_label(goal_id)}[/dim]")
+            console.print(f"[dim]Workspace: {goal_dir}[/dim]")
+            console.print(f"[dim]Workspace files: {list_workspace_files(goal_id)}[/dim]")
+
+            save_goal(goal_id, goal, status="running")
+            self.memory.short.set("goal", goal)
+            self.memory.short.set("goal_id", goal_id)
+
+            from core.environment import environment_summary
+
+            env_summary = environment_summary(goal_id=goal_id)
+            self.memory.short.set("environment", env_summary)
+            _append_trace(trace_events, "environment_scanned", summary=env_summary)
+
+            plan = create_plan(goal, memory=self.memory)
+            steps = plan.get("steps", [])
+            _append_trace(
+                trace_events,
+                "plan_created",
+                plan_summary=plan.get("plan_summary", ""),
+                step_count=len(steps),
+                step_indexes=[s.get("step_index") for s in steps],
             )
 
-            # Loop detection
-            if check_loop_detection(attempted, step):
-                stop_reason = f"Loop detected on step {step['step_index']}."
-                console.print(f"[red]⚠  {stop_reason} Stopping.[/red]")
-                break
+            while steps and len(state["attempted"]) < MAX_STEPS:
+                step = steps.pop(0)
+                latest_output = _latest_completed_output(state["completed"])
+                resolved = _replace_placeholders(step.get("tool_input", {}) or {}, latest_output)
+                step = {**step, "tool_input": resolved}
+                tool = step.get("tool")
 
-            console.print(f"\n[bold]→ Step {step['step_index']}:[/bold] {step['description']}")
-            console.print(f"  [dim]Tool: {step['tool']} | Input: {step['tool_input']}[/dim]")
+                _append_trace(
+                    trace_events,
+                    "step_started",
+                    step_index=step.get("step_index"),
+                    tool=tool,
+                    input=resolved,
+                )
 
-            # Execute
-            executed = run_step(step)
+                console.print(
+                    f"[dim]Step {step.get('step_index')}: {step.get('description')} ({tool})[/dim]"
+                )
+                console.print(f"[dim]Workspace files before step: {list_workspace_files(goal_id)}[/dim]")
 
-            # Smoke test Python artifacts when they are written.
-            if step.get("tool") == "file_write" and str(step.get("tool_input", {}).get("path", "")).endswith(".py") and executed.get("status") == "success":
-                smoke = smoke_test_python_file(step.get("tool_input", {}).get("path", ""))
-                executed["result"]["metadata"]["smoke_test"] = smoke
-                if not smoke.get("compiled", False):
-                    executed["result"]["ok"] = False
-                    executed["result"]["error"] = smoke.get("compile_error") or "Python compile failed during smoke test."
-                elif smoke.get("safe_to_execute") and not smoke.get("execution_skipped") and not smoke.get("executed"):
-                    executed["result"]["ok"] = False
-                    executed["result"]["error"] = (
-                        "Python runtime validation failed: "
-                        + (smoke.get("stderr") or "execution produced non-zero exit code or timeout")
+                if check_loop_detection(state["attempted"], step):
+                    _append_trace(
+                        trace_events,
+                        "loop_detection_triggered",
+                        step_index=step.get("step_index"),
+                        tool=tool,
+                        input=resolved,
                     )
-                executed["status"] = "success" if executed["result"]["ok"] else "failed"
+                    reason = "Loop detected"
+                    flush_trace("failed", reason)
+                    return self._fail(goal_id, reason, goal)
 
-            # Evaluate
-            evaluated = evaluate_step(executed)
-            passed = evaluated["evaluation"]["passed"]
-            reason = evaluated["evaluation"]["reason"]
+                executed = run_step(step)
 
-            # Deterministic repair before any LLM replanning.
-            if not passed:
-                # Fingerprint used to detect repeated failures.
-                failure_fingerprint = f"{step.get('tool')}|{step.get('tool_input')}|{(executed.get('result') or {}).get('error')}"
-                # Count previous identical fingerprints in attempted steps.
-                repeat_count = 0
-                for prev in attempted:
-                    if prev.get('tool') == step.get('tool') and prev.get('tool_input') == step.get('tool_input'):
-                        prev_err = (prev.get('result') or {}).get('error') if isinstance(prev.get('result'), dict) else None
-                        cur_err = (executed.get('result') or {}).get('error') if isinstance(executed.get('result'), dict) else None
-                        if prev_err == cur_err:
-                            repeat_count += 1
-                previous_fingerprint = failure_fingerprint if repeat_count >= 1 else None
+                if tool == "file_write":
+                    path = str(resolved.get("path", ""))
+                    if path.endswith(".py") and executed.get("status") == "success":
+                        smoke = smoke_test_python_file(path)
+                        executed.setdefault("result", {})
+                        executed["result"].setdefault("metadata", {})
+                        executed["result"]["metadata"]["smoke_test"] = smoke
+                        _append_trace(
+                            trace_events,
+                            "python_smoke_test",
+                            step_index=step.get("step_index"),
+                            path=path,
+                            smoke_result=smoke,
+                        )
+
+                observed = evaluate_step(executed)
+
+                if (observed.get("observation", {}) or {}).get("issues"):
+                    observed["failure_context"] = {
+                        "tool": tool,
+                        "input": resolved,
+                        "issues": observed["observation"]["issues"],
+                        "error": (observed.get("result") or {}).get("error"),
+                    }
+
+                _append_trace(
+                    trace_events,
+                    "step_finished",
+                    step_index=step.get("step_index"),
+                    tool=tool,
+                    input=resolved,
+                    output=observed.get("result"),
+                    status=observed.get("status"),
+                    observation=observed.get("observation"),
+                )
+
+                state["attempted"].append(observed)
+
+                save_step(
+                    goal_id,
+                    step["step_index"],
+                    step["description"],
+                    tool,
+                    resolved,
+                    observed.get("result", {}),
+                    observed.get("status", "unknown"),
+                )
+
+                if tool == "done":
+                    advisory = self._collect_advisory(goal, state["completed"], state["attempted"])
+                    quality = review_quality(goal, state["completed"], state["attempted"])
+                    quality_reason = (
+                        "quality passed"
+                        if quality.get("passed")
+                        else _quality_failure_reason(quality, advisory)
+                    )
+
+                    _append_trace(
+                        trace_events,
+                        "quality_decision",
+                        passed=quality.get("passed", False),
+                        category=quality.get("category"),
+                        score=quality.get("score"),
+                        issues=quality.get("issues", []),
+                        reasoning_trace=quality.get("reasoning_trace", []),
+                        failure_factors=quality.get("failure_factors", []),
+                        decision_reason=quality_reason,
+                        advisory=advisory,
+                    )
+
+                    if quality.get("passed"):
+                        reason = resolved.get("summary", "done")
+                        _append_trace(trace_events, "goal_completed", summary=reason)
+                        flush_trace("completed", reason)
+                        update_goal_status(goal_id, "completed")
+                        self.memory.episodic.record(goal_id, goal, "completed", "done")
+                        return f"completed: {reason}"
+
+                    if state["replan_count"] < MAX_REPLAN_ATTEMPTS:
+                        state["replan_count"] += 1
+                        _append_trace(
+                            trace_events,
+                            "replan_triggered",
+                            trigger="quality_failure",
+                            attempt=state["replan_count"],
+                            reason=quality_reason,
+                        )
+                        new_plan = replan(
+                            goal,
+                            state["completed"],
+                            observed,
+                            quality_reason,
+                            memory=self.memory,
+                        )
+                        steps = new_plan.get("steps", [])
+                        _append_trace(
+                            trace_events,
+                            "replan_result",
+                            attempt=state["replan_count"],
+                            step_count=len(steps),
+                        )
+                        continue
+
+                    _append_trace(trace_events, "goal_failed", reason=quality_reason)
+                    flush_trace("failed", quality_reason)
+                    return self._fail(goal_id, quality_reason, goal)
+
+                if observed.get("status") == "success":
+                    state["completed"].append(observed)
+                    state["step_results"][step["step_index"]] = observed.get("result", {})
+                    continue
+
+                failure_reason = self._issue_summary(observed)
+                fingerprint = _failure_fingerprint(step, observed)
+                seen = fingerprint in state["failure_fingerprints"]
+                state["failure_fingerprints"].add(fingerprint)
 
                 repair = deterministic_repair(
                     step=step,
                     executed_step=executed,
                     goal=goal,
-                    completed_steps=completed,
-                    attempted_steps=attempted,
-                    previous_failure_fingerprint=previous_fingerprint,
+                    completed_steps=state["completed"],
+                    attempted_steps=state["attempted"],
+                    previous_failure_fingerprint=fingerprint if seen else None,
                 )
 
-                if repair.get("handled") and repair.get("action") in ("retry", "convert"):
-                    repair_count += 1
-                    if repair_count > MAX_REPAIR_ATTEMPTS:
-                        stop_reason = "Maximum repair attempts reached."
-                        update_goal_status(goal_id, "failed")
-                        self.memory.episodic.record(goal_id, goal, "failed", stop_reason)
-                        return f"JARVIS failed due to repeated repair attempts: {stop_reason}"
+                if repair.get("handled"):
+                    action = repair.get("action", "")
+                    _append_trace(
+                        trace_events,
+                        "deterministic_repair_triggered",
+                        step_index=step.get("step_index"),
+                        action=action,
+                        reason=repair.get("reason"),
+                        new_steps_count=len(repair.get("new_steps") or []),
+                        repeated_failure=seen,
+                    )
+                    if action == "stop":
+                        failure_reason = str(repair.get("reason") or failure_reason)
+                        advisory = self._collect_advisory(goal, state["completed"], state["attempted"])
+                        quality = review_quality(goal, state["completed"], state["attempted"])
+                        _append_trace(
+                            trace_events,
+                            "quality_decision",
+                            passed=quality.get("passed", False),
+                            category=quality.get("category"),
+                            score=quality.get("score"),
+                            issues=quality.get("issues", []),
+                            reasoning_trace=quality.get("reasoning_trace", []),
+                            failure_factors=quality.get("failure_factors", []),
+                            decision_reason=failure_reason,
+                            advisory=advisory,
+                        )
+                        _append_trace(trace_events, "goal_failed", reason=failure_reason)
+                        flush_trace("failed", failure_reason)
+                        return self._fail(goal_id, failure_reason, goal)
+
+                    if action == "skip":
+                        continue
 
                     new_steps = repair.get("new_steps") or []
                     if new_steps:
-                        # Execute repaired steps immediately (bounded to at most one repair step here).
-                        for ns in new_steps:
-                            ns = dict(ns)
-                            ns.setdefault("tool_input", ns.get("tool_input", {}) or {})
-                            ns_exec = run_step(ns)
-                            ns_eval = evaluate_step(ns_exec)
-                            attempted.append(ns_eval)
-                            # Persist repaired step
-                            save_step(
-                                goal_id=goal_id,
-                                step_index=ns.get("step_index", step.get("step_index")),
-                                description=ns.get("description", step.get("description")),
-                                tool=ns.get("tool", step.get("tool")),
-                                tool_input=ns.get("tool_input", {}),
-                                result=ns_exec.get("result"),
-                                status=ns_exec.get("status", "unknown"),
-                            )
+                        steps = new_steps + steps
+                        continue
 
-                            if ns_exec.get("status") == "success":
-                                passed = True
-                                executed = ns_exec
-                                evaluated = ns_eval
-                                reason = ns_eval["evaluation"]["reason"]
-                            else:
-                                passed = False
-                                reason = ns_eval["evaluation"]["reason"]
+                    failure_reason = str(repair.get("reason") or failure_reason)
 
-                    if passed:
-                        pass
-                    else:
-                        pass
-
-                elif repair.get("handled") and repair.get("action") == "stop":
-                    stop_reason = repair.get("reason") or "Deterministic repair stopped the plan."
-                    update_goal_status(goal_id, "failed")
-                    self.memory.episodic.record(goal_id, goal, "failed", stop_reason)
-                    return f"JARVIS failed to complete the goal: {stop_reason}"
-
-            attempted.append(evaluated)
-
-            # Print result summary
-            result_preview = str(executed.get("result", ""))[:300]
-            if passed:
-                console.print(f"  [green]✓ {reason}[/green]")
-                console.print(f"  [dim]{result_preview}[/dim]")
-                # Preserve structured result for verifier and placeholder context.
-                step_results[step["step_index"]] = executed.get("result", {})
-
-            else:
-                console.print(f"  [red]✗ {reason}[/red]")
-
-            # Persist step
-            save_step(
-                goal_id=goal_id,
-                step_index=step["step_index"],
-                description=step["description"],
-                tool=step["tool"],
-                tool_input=step.get("tool_input", {}),
-                result=executed.get("result", {}),
-
-                status=executed.get("status", "unknown")
-            )
-
-            # Handle terminal step
-            if executed.get("status") == "done":
-                verification = verify_goal(goal, completed, attempted)
-                if verification["passed"]:
-                    quality = review_quality(goal, completed_steps=completed, attempted_steps=attempted)
-                    if quality.get("passed") or quality.get("score", 0.0) >= QUALITY_THRESHOLD:
-                        semantic = semantic_verify_goal(goal, completed_steps=completed, attempted_steps=attempted)
-                        if semantic.get("passed") and float(semantic.get("confidence", 0.0)) >= SEMANTIC_CONFIDENCE_MIN:
-                            terminal_success = True
-
-                        console.print(
-                            f"  [green]✓ Goal verified:[/green] {verification['reason']} "
-                            f"[dim](confidence {verification['confidence']:.2f})[/dim]"
-                        )
-                        console.print(
-                            f"  [green]✓ Quality passed:[/green] "
-                            f"score {quality.get('score', 0.0):.2f} "
-                            f"[dim]({quality.get('category', 'unknown')})[/dim]"
-                        )
-                        console.print("\n[bold green]✅ Goal complete![/bold green]")
-                        update_goal_status(goal_id, "completed")
-                        self.memory.episodic.record(goal_id, goal, "success", plan.get("plan_summary", ""))
-                        return executed.get("result", "Done.")
-
-                    issues = "; ".join(quality.get("issues") or ["quality score below threshold"])
-                    reason = (
-                        f"Goal quality failed: score {quality.get('score', 0.0):.2f} "
-                        f"below {QUALITY_THRESHOLD:.2f}. {issues}"
+                if state["replan_count"] < MAX_REPLAN_ATTEMPTS:
+                    state["replan_count"] += 1
+                    _append_trace(
+                        trace_events,
+                        "replan_triggered",
+                        trigger="step_failure",
+                        attempt=state["replan_count"],
+                        reason=failure_reason,
                     )
-                else:
-                    reason = f"Goal verification failed: {verification['reason']}"
-                console.print(f"  [red]✗ {reason}[/red]")
-                retry_count += 1
-                if retry_count > MAX_RETRIES or replan_count >= MAX_REPLAN_ATTEMPTS:
-                    stop_reason = f"Maximum retries/replans reached during verification after {retry_count} failures."
-                    console.print(f"\n[red]❌ {stop_reason}[/red]")
-                    update_goal_status(goal_id, "failed")
-                    self.memory.episodic.record(goal_id, goal, "failed", reason)
-                    return f"JARVIS failed to complete the goal after verification retries. Last error: {reason}"
+                    new_plan = replan(
+                        goal,
+                        state["completed"],
+                        observed,
+                        failure_reason,
+                        memory=self.memory,
+                    )
+                    steps = new_plan.get("steps", [])
+                    _append_trace(
+                        trace_events,
+                        "replan_result",
+                        attempt=state["replan_count"],
+                        step_count=len(steps),
+                    )
+                    continue
 
-                replan_count += 1
-                console.print(f"\n[yellow]↺ Replanning after verification failure (attempt {replan_count}/{MAX_REPLAN_ATTEMPTS})...[/yellow]")
-                new_plan = replan(goal, completed, evaluated, reason, memory=self.memory)
-                steps = new_plan.get("steps", [])
-                if not steps:
-                    stop_reason = f"Replan produced no steps after verification failure: {reason}"
-                    console.print("[red]Replan produced no steps. Stopping.[/red]")
-                    break
-                continue
+                fail_reason = failure_reason or "Plan exhausted"
+                _append_trace(trace_events, "goal_failed", reason=fail_reason)
+                flush_trace("failed", fail_reason)
+                return self._fail(goal_id, fail_reason, goal)
 
-            # Handle failure with replan
-            if not passed:
-                retry_count += 1
-                if retry_count > MAX_RETRIES or replan_count >= MAX_REPLAN_ATTEMPTS:
-                    stop_reason = f"Maximum retries/replans reached after {retry_count} failures."
-                    console.print(f"\n[red]❌ {stop_reason}[/red]")
-                    update_goal_status(goal_id, "failed")
-                    self.memory.episodic.record(goal_id, goal, "failed", stop_reason)
-                    return f"JARVIS failed to complete the goal after repeated retries. Last error: {reason}"
+            fail_reason = "Plan exhausted"
+            _append_trace(trace_events, "goal_failed", reason=fail_reason)
+            flush_trace("failed", fail_reason)
+            return self._fail(goal_id, fail_reason, goal)
+        finally:
+            if not trace_flushed:
+                _append_trace(
+                    trace_events,
+                    "trace_finalized_on_exit",
+                    status=final_status,
+                    reason=final_reason or "orchestrator exited",
+                )
+                flush_trace(
+                    final_status if final_status != "running" else "aborted",
+                    final_reason or "orchestrator exited without explicit completion/failure",
+                )
+            clear_execution_context()
 
-                replan_count += 1
-                console.print(f"\n[yellow]↺ Replanning (attempt {replan_count}/{MAX_REPLAN_ATTEMPTS})...[/yellow]")
-                new_plan = replan(goal, completed, step, reason, memory=self.memory)
-                steps = new_plan.get("steps", [])
-                if not steps:
-                    stop_reason = f"Replan produced no steps after failure: {reason}"
-                    console.print("[red]Replan produced no steps. Stopping.[/red]")
-                    break
-            else:
-                completed.append(evaluated)
-                retry_count = 0  # Reset on success
+    def _issue_summary(self, observed_step: dict) -> str:
+        observation = observed_step.get("observation", {}) or {}
+        issues = observation.get("issues", []) or []
+        if issues:
+            return ", ".join(str(i) for i in issues)
+        result = observed_step.get("result", {}) or {}
+        if result.get("error"):
+            return str(result["error"])
+        return "Step execution failed"
 
-        # Exhausted steps
-        if total_steps >= MAX_STEPS:
-            stop_reason = f"Hit maximum step limit ({MAX_STEPS})."
-            console.print(f"\n[red]⚠  {stop_reason}[/red]")
+    def _collect_advisory(self, goal: str, completed: list[dict], attempted: list[dict]) -> dict:
+        verify = verify_goal(goal, completed, attempted_steps=attempted)
+        semantic = semantic_verify_goal(goal, completed, attempted_steps=attempted)
 
-        if not terminal_success:
-            if not stop_reason:
-                stop_reason = "Plan ended without a done step."
-            update_goal_status(goal_id, "failed")
-            self.memory.episodic.record(goal_id, goal, "failed", stop_reason)
-            console.print(f"\n[red]❌ Goal not completed: {stop_reason}[/red]")
-            return f"JARVIS failed to complete the goal: {stop_reason}"
+        return {
+            "verify_status": verify.get("advisory_status"),
+            "verify_hints": verify.get("hints", []),
+            "verify_confidence": verify.get("confidence"),
+            "semantic_status": semantic.get("advisory_status"),
+            "semantic_hints": semantic.get("hints", []),
+            "semantic_confidence": semantic.get("confidence"),
+        }
 
-        update_goal_status(goal_id, "completed")
-        
-        # Generate LLM summary instead of hardcoded message
-        completed_summary = "\n".join([
-            f"Step {i+1}: {s.get('description')} - {str(s.get('result', ''))[:100]}"
-            for i, s in enumerate(completed)
-
-        ])
-        
-        summary_prompt = f"""The following steps were completed for this goal: {goal}
-
-Steps and results:
-{completed_summary}
-
-Write one clear paragraph summarizing what was accomplished."""
-        
-        try:
-            summary = _call_llm(summary_prompt, "You are a helpful summarizer of task outcomes.")
-        except Exception as e:
-            summary = f"Completed {len(completed)} steps for goal: {goal}"
-        
-        self.memory.episodic.record(goal_id, goal, "completed", summary)
-        console.print(f"\n[green]✅ Done. Executed {len(completed)} steps.[/green]")
-        return summary
+    def _fail(self, goal_id: str, reason: str, goal: str) -> str:
+        update_goal_status(goal_id, "failed")
+        self.memory.episodic.record(goal_id, goal, "failed", reason)
+        console.print(f"[red]FAILED: {reason}[/red]")
+        return f"failed: {reason}"

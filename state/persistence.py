@@ -1,6 +1,6 @@
 """
 state/persistence.py
-Handles saving and loading task state to SQLite so JARVIS can resume after interruption.
+Handles saving and loading task state to SQLite so AURUM can resume after interruption.
 """
 
 import json
@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "jarvis_state.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "aurum_state.db")
 
 
 def _get_conn():

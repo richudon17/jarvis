@@ -1,0 +1,1 @@
+3 lines: apple banana orange then read it back

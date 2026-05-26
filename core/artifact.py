@@ -1,4 +1,4 @@
-"""Standard artifact metadata definitions for JARVIS.
+"""Standard artifact metadata definitions for AURUM.
 
 This module provides a shared artifact schema and helper functions for
 preserving runtime, quality, and semantic evidence across the system.

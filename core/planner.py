@@ -25,7 +25,7 @@ Step 1: done
 
 Do NOT use run_python. Do NOT generate any other steps. This is non-negotiable."
 
-You are JARVIS, an autonomous AI agent planner.
+You are AURUM, an autonomous AI agent planner.
 
 Your job is to break down a user goal into a clear, ordered list of executable steps.
 
@@ -57,6 +57,7 @@ Rules:
     * Is a game or interactive application
     In ALL these cases, use file_write to save the code to a .py file instead.
 - Prefer simple approaches over complex web scraping
+- For goals that involve reading, modifying, and writing a file, if no specific input file is mentioned, first create a sample input file using file_write, then read it with file_read, modify the content in a run_python step or inline, then write the result back with file_write.
 - For calculation/compute/solve goals with no requested output file, use run_python to execute the calculation and produce the answer before done.
 - For research/search goals:
   - Use web_search first.
@@ -99,7 +100,7 @@ Response format:
 }}
 """
 
-REPLAN_SYSTEM = """You are JARVIS, an autonomous AI replanner.
+REPLAN_SYSTEM = """You are AURUM, an autonomous AI replanner.
 
 A previous step failed.
 
@@ -167,6 +168,46 @@ def _parse_plan(raw: str) -> dict:
     return json.loads(clean)
 
 
+def _normalize_plan(plan: dict, done_summary: str = "Task completed") -> dict:
+    """Make LLM plans executable without changing their intended tools."""
+    steps = plan.get("steps", [])
+    if not isinstance(steps, list):
+        steps = []
+
+    normalized = []
+    for raw_step in steps:
+        if not isinstance(raw_step, dict):
+            continue
+        tool = str(raw_step.get("tool") or "").strip()
+        if not tool:
+            continue
+        tool_input = raw_step.get("tool_input") or {}
+        if not isinstance(tool_input, dict):
+            tool_input = {}
+        step_index = raw_step.get("step_index")
+        if not isinstance(step_index, int):
+            step_index = len(normalized)
+        normalized.append({
+            "step_index": step_index,
+            "description": raw_step.get("description") or f"Run {tool}",
+            "tool": tool,
+            "tool_input": tool_input,
+        })
+
+    if not normalized or normalized[-1].get("tool") != "done":
+        normalized.append({
+            "step_index": len(normalized),
+            "description": "Mark task complete",
+            "tool": "done",
+            "tool_input": {"summary": done_summary},
+        })
+
+    return {
+        "plan_summary": plan.get("plan_summary", "") if isinstance(plan, dict) else "",
+        "steps": normalized,
+    }
+
+
 def _filename_from_goal(goal: str) -> str:
     """Extract the first mentioned Python filename from a goal."""
     match = re.search(r"[\w./-]+\.py\b", goal)
@@ -189,7 +230,7 @@ import argparse
 import json
 from pathlib import Path
 
-DATA_FILE = Path.home() / ".jarvis_todo.json"
+DATA_FILE = Path.home() / ".aurum_todo.json"
 
 
 def load_tasks():
@@ -517,21 +558,113 @@ def _is_gui_or_game_goal(goal: str) -> bool:
     return any(kw in goal_lower for kw in gui_keywords)
 
 
-def _is_code_generation_goal(goal: str) -> bool:
+def _is_plain_file_creation_goal(goal: str) -> bool:
+    """Detect goals that are simple file creation with raw content (txt, md, json, etc.)."""
     goal_lower = goal.lower()
-    generation_keywords = [
-        "write",
-        "create",
-        "build",
-        "generate",
-        "make",
-        "implement",
-        "code",
-        "script",
-        "app",
-        "program"
+    non_py_extensions = (
+        ".txt", ".md", ".json", ".csv", ".yaml", ".yml",
+        ".xml", ".html", ".css", ".log", ".cfg", ".ini", ".conf",
+    )
+    if any(ext in goal_lower for ext in non_py_extensions):
+        intent_markers = ("create", "write", "make", "save", "generate", "replace", "overwrite")
+        return any(marker in goal_lower for marker in intent_markers)
+    return False
+
+
+def _extract_plain_filename(goal: str) -> str:
+    match = re.search(
+        r"([\w./-]+\.(?:txt|md|json|csv|yaml|yml|xml|html|css|log|cfg|ini|conf))\b",
+        goal,
+        re.IGNORECASE,
+    )
+    return match.group(1).rstrip(".,;:") if match else ""
+
+
+def _is_file_read_goal(goal: str) -> bool:
+    goal_lower = goal.lower()
+    if not _extract_plain_filename(goal):
+        return False
+    read_markers = ("read", "show", "display", "open")
+    write_markers = ("create", "write", "make", "save", "generate", "replace", "overwrite")
+    return any(marker in goal_lower for marker in read_markers) and not any(
+        marker in goal_lower for marker in write_markers
+    )
+
+
+def _goal_requests_readback(goal: str) -> bool:
+    goal_lower = goal.lower()
+    return any(
+        phrase in goal_lower
+        for phrase in (
+            "then read it back",
+            "read it back",
+            "then read",
+            "read back",
+        )
+    )
+
+
+def _strip_readback_request(content: str) -> str:
+    return re.sub(
+        r"(?:\n|\s)+then\s+read(?:\s+it)?\s+back\s*$",
+        "",
+        content,
+        flags=re.IGNORECASE,
+    ).strip()
+
+
+def _normalize_plain_file_content(content: str) -> str:
+    content = _strip_readback_request(content).strip(" .")
+    content = re.sub(r"^\s*(?:the\s+)?(?:text|content)\s+", "", content, flags=re.IGNORECASE)
+    content = re.sub(r"^\s*\d+\s+lines?\s*:\s*", "", content, flags=re.IGNORECASE)
+    return content.strip()
+
+
+def _file_read_plan(goal: str) -> dict:
+    filename = _extract_plain_filename(goal)
+    if not filename:
+        return {"plan_summary": "Read file", "steps": []}
+    return {
+        "plan_summary": f"Read {filename}",
+        "steps": [
+            {
+                "step_index": 0,
+                "description": f"Read {filename}",
+                "tool": "file_read",
+                "tool_input": {"path": filename},
+            },
+            {
+                "step_index": 1,
+                "description": "Return file contents",
+                "tool": "done",
+                "tool_input": {"summary": "{output}"},
+            },
+        ],
+    }
+
+def _is_code_generation_goal(goal: str) -> bool:
+    """Detect goals that explicitly require Python code generation."""
+    goal_lower = goal.lower()
+    # Explicit Python code generation indicators
+    explicit_python_keywords = [
+        "python", "python script", "python code", "python program",
+        "pygame", "tkinter", "turtle", "gui app", "gui application"
     ]
-    return ".py" in goal_lower and any(kw in goal_lower for kw in generation_keywords)
+    # Check for explicit Python mention
+    for kw in explicit_python_keywords:
+        if kw in goal_lower:
+            return True
+    # Check for .py file with code/program/script/app keyword
+    if ".py" in goal_lower:
+        code_action_keywords = ["write", "create", "build", "generate", "make", "implement", "script", "program", "app"]
+        if any(kw in goal_lower for kw in code_action_keywords):
+            return True
+    # Games and interactive apps always need code generation
+    game_keywords = ["game", "interactive"]
+    dangerous_keywords = ["pygame", "tkinter", "turtle"]
+    if any(kw in goal_lower for kw in game_keywords + dangerous_keywords):
+        return True
+    return False
 
 
 def _plan_has_empty_python_write(plan: dict) -> bool:
@@ -544,14 +677,92 @@ def _plan_has_empty_python_write(plan: dict) -> bool:
     return False
 
 
+def _plain_file_creation_plan(goal: str) -> dict:
+    """Create a simple plan for plain file creation goals."""
+    filename = _extract_plain_filename(goal)
+    if not filename:
+        return {
+            "plan_summary": "Plain file creation",
+            "steps": []
+        }
+
+    goal_lower = goal.lower()
+    lower_filename = filename.lower()
+    filename_idx = goal_lower.find(lower_filename)
+
+    content = ""
+
+    # Pattern: "... <filename> with <content>"
+    with_match = re.search(r"\bwith\b(.+)$", goal, re.IGNORECASE | re.DOTALL)
+    if with_match and filename_idx != -1 and with_match.start() > filename_idx:
+        content = with_match.group(1)
+
+    # Pattern: "write <content> to <filename>"
+    if not content and filename_idx != -1:
+        to_match = re.search(r"\bto\b\s+" + re.escape(filename), goal, re.IGNORECASE)
+        write_match = re.search(r"\bwrite\b(.+?)\bto\b", goal, re.IGNORECASE | re.DOTALL)
+        if to_match and write_match and write_match.start() < to_match.start():
+            content = write_match.group(1)
+
+    # Pattern: quoted payload anywhere in prompt
+    if not content:
+        quoted = re.search(r"['\"]([^'\"]+)['\"]", goal)
+        if quoted:
+            content = quoted.group(1).strip()
+
+    content = _normalize_plain_file_content(content)
+
+    if content:
+        steps = [
+            {
+                "step_index": 0,
+                "description": f"Write content to {filename}",
+                "tool": "file_write",
+                "tool_input": {
+                    "path": filename,
+                    "content": content
+                }
+            }
+        ]
+        if _goal_requests_readback(goal):
+            steps.append({
+                "step_index": 1,
+                "description": f"Read {filename}",
+                "tool": "file_read",
+                "tool_input": {"path": filename},
+            })
+        steps.append({
+            "step_index": len(steps),
+            "description": "Mark task complete",
+            "tool": "done",
+            "tool_input": {
+                "summary": "{output}" if _goal_requests_readback(goal) else f"Created {filename} with content"
+            }
+        })
+        return {
+            "plan_summary": f"Create file {filename}",
+            "steps": steps,
+        }
+    return {
+        "plan_summary": "Plain file creation",
+        "steps": []
+    }
+
 def create_plan(goal: str, context: str = "", memory=None) -> dict:
     """Generate a step-by-step plan for a goal, optionally using episodic memory."""
-
+    # Check for plain file creation FIRST (txt, md, json, etc.)
+    if _is_plain_file_creation_goal(goal):
+        plan = _plain_file_creation_plan(goal)
+        if plan["steps"]:
+            return plan
+    if _is_file_read_goal(goal):
+        plan = _file_read_plan(goal)
+        if plan["steps"]:
+            return plan
     if _is_gui_or_game_goal(goal) or _is_code_generation_goal(goal):
         return _raw_code_fallback_plan(goal)
-
     tools_desc = get_tool_descriptions()
-    
+
     # If memory provided, recall recent episodes and inject into context
     episodes_text = ""
     if memory and hasattr(memory, 'episodic') and hasattr(memory.episodic, 'recall_recent'):
@@ -574,7 +785,10 @@ def create_plan(goal: str, context: str = "", memory=None) -> dict:
         tools=tools_desc
     )
 
+    env = memory.short.get("environment", "") if memory else ""
     user_prompt = goal
+    if env:
+        user_prompt += f"\n\nCurrent environment:\n{env}"
 
     if context:
         user_prompt += f"\n\nAdditional context:\n{context}"
@@ -584,7 +798,7 @@ def create_plan(goal: str, context: str = "", memory=None) -> dict:
         plan = _parse_plan(raw)
         if _plan_has_empty_python_write(plan):
             return _raw_code_fallback_plan(goal)
-        return plan
+        return _normalize_plan(plan)
 
     except (json.JSONDecodeError, ValueError) as e:
         # Handle JSON parsing errors
@@ -617,11 +831,20 @@ def replan(
 
     tools_desc = get_tool_descriptions()
 
+    def _result_summary(step: dict) -> str:
+        result = step.get("result", "")
+        if isinstance(result, str):
+            return result[:100]
+        try:
+            return json.dumps(result, default=str)[:100]
+        except (TypeError, ValueError):
+            return str(result)[:100]
+
     completed_summary = "\n".join(
         [
-            f"Step {s['step_index']}: "
-            f"{s['description']} → "
-            f"{s.get('result', '')[:100]}"
+            f"Step {s.get('step_index')}: "
+            f"{s.get('description')} → "
+            f"{_result_summary(s)}"
             for s in completed_steps
         ]
     ) or "None"
@@ -640,7 +863,7 @@ def replan(
 
     try:
         raw = _call_llm(user_prompt, system_prompt)
-        return _parse_plan(raw)
+        return _normalize_plan(_parse_plan(raw), "Replanned task completed")
 
     except (json.JSONDecodeError, ValueError) as e:
         # Handle JSON parsing errors
