@@ -210,5 +210,4 @@ Feel free to reach out via GitHub issues for anything related to the project.
 MIT License — do what you want with it, just don't claim it's yours.
 
 ---
-
-<p align="center">Built with curiosity, caffeine, and way too many late nights.</p>
+---------------------------------------------------------------Built with curiosity, caffeine, and way too many late nights.----------------------------------------------------------------
