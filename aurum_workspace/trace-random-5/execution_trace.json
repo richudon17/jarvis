@@ -1,15 +1,15 @@
 {
   "goal_id": "trace-random-5",
   "goal": "random goal 5",
-  "trace_started_at": "2026-05-26T18:47:33.093521+00:00",
-  "trace_ended_at": "2026-05-26T18:47:33.096565+00:00",
+  "trace_started_at": "2026-05-27T10:11:41.154689+00:00",
+  "trace_ended_at": "2026-05-27T10:11:41.158249+00:00",
   "final_status": "completed",
   "final_reason": "ok",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-26T18:47:33.093526+00:00",
+      "timestamp": "2026-05-27T10:11:41.154693+00:00",
       "goal_id": "trace-random-5",
       "goal": "random goal 5",
       "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-5"
@@ -17,13 +17,13 @@
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-26T18:47:33.094327+00:00",
-      "summary": "Working directory is empty."
+      "timestamp": "2026-05-27T10:11:41.155588+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-random-5\nExisting files (2):\n  - g2.txt (13 bytes)\n  - execution_trace.json (5948 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-26T18:47:33.094334+00:00",
+      "timestamp": "2026-05-27T10:11:41.155593+00:00",
       "plan_summary": "randomized plan",
       "step_count": 3,
       "step_indexes": [
@@ -35,7 +35,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.094338+00:00",
+      "timestamp": "2026-05-27T10:11:41.155596+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -46,7 +46,7 @@
     {
       "event_index": 4,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.094808+00:00",
+      "timestamp": "2026-05-27T10:11:41.156359+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -69,7 +69,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-random-5/g2.txt",
           "bytes_written": 13,
           "python_syntax_valid": false,
-          "tool_timestamp": "2026-05-26T18:47:33.094801+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.156351+00:00"
         }
       },
       "status": "success",
@@ -88,7 +88,7 @@
     {
       "event_index": 5,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.095105+00:00",
+      "timestamp": "2026-05-27T10:11:41.156679+00:00",
       "step_index": 1,
       "tool": "file_read",
       "input": {
@@ -98,7 +98,7 @@
     {
       "event_index": 6,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.095503+00:00",
+      "timestamp": "2026-05-27T10:11:41.157104+00:00",
       "step_index": 1,
       "tool": "file_read",
       "input": {
@@ -117,7 +117,7 @@
           "workspace_files": [],
           "path": "g2.txt",
           "bytes_read": 13,
-          "tool_timestamp": "2026-05-26T18:47:33.095499+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.157099+00:00"
         }
       },
       "status": "success",
@@ -136,7 +136,7 @@
     {
       "event_index": 7,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.095808+00:00",
+      "timestamp": "2026-05-27T10:11:41.157418+00:00",
       "step_index": 2,
       "tool": "done",
       "input": {
@@ -146,7 +146,7 @@
     {
       "event_index": 8,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.096152+00:00",
+      "timestamp": "2026-05-27T10:11:41.157698+00:00",
       "step_index": 2,
       "tool": "done",
       "input": {
@@ -178,7 +178,7 @@
     {
       "event_index": 9,
       "event_type": "quality_decision",
-      "timestamp": "2026-05-26T18:47:33.096559+00:00",
+      "timestamp": "2026-05-27T10:11:41.158242+00:00",
       "passed": true,
       "category": "file",
       "score": 0.78,
@@ -206,7 +206,7 @@
     {
       "event_index": 10,
       "event_type": "goal_completed",
-      "timestamp": "2026-05-26T18:47:33.096564+00:00",
+      "timestamp": "2026-05-27T10:11:41.158247+00:00",
       "summary": "ok"
     }
   ]

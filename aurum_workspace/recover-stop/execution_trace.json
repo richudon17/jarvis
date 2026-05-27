@@ -1,15 +1,15 @@
 {
   "goal_id": "recover-stop",
   "goal": "Try writing outside workspace",
-  "trace_started_at": "2026-05-26T18:47:33.062739+00:00",
-  "trace_ended_at": "2026-05-26T18:47:33.064940+00:00",
+  "trace_started_at": "2026-05-27T10:11:41.124554+00:00",
+  "trace_ended_at": "2026-05-27T10:11:41.126739+00:00",
   "final_status": "failed",
   "final_reason": "Same failure repeated; deterministic repair stopped.",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-26T18:47:33.062744+00:00",
+      "timestamp": "2026-05-27T10:11:41.124559+00:00",
       "goal_id": "recover-stop",
       "goal": "Try writing outside workspace",
       "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/recover-stop"
@@ -17,13 +17,13 @@
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-26T18:47:33.063680+00:00",
-      "summary": "Working directory is empty."
+      "timestamp": "2026-05-27T10:11:41.125441+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/recover-stop\nExisting files (1):\n  - execution_trace.json (6067 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-26T18:47:33.063686+00:00",
+      "timestamp": "2026-05-27T10:11:41.125446+00:00",
       "plan_summary": "bad plan",
       "step_count": 2,
       "step_indexes": [
@@ -34,7 +34,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.063690+00:00",
+      "timestamp": "2026-05-27T10:11:41.125450+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -45,7 +45,7 @@
     {
       "event_index": 4,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.064021+00:00",
+      "timestamp": "2026-05-27T10:11:41.125802+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -62,7 +62,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/recover-stop",
           "workspace_files": [],
           "path": "../escape.txt",
-          "tool_timestamp": "2026-05-26T18:47:33.064013+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.125793+00:00"
         }
       },
       "status": "failed",
@@ -85,7 +85,7 @@
     {
       "event_index": 5,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-26T18:47:33.064279+00:00",
+      "timestamp": "2026-05-27T10:11:41.126094+00:00",
       "trigger": "step_failure",
       "attempt": 1,
       "reason": "path must stay inside the workspace"
@@ -93,14 +93,14 @@
     {
       "event_index": 6,
       "event_type": "replan_result",
-      "timestamp": "2026-05-26T18:47:33.064283+00:00",
+      "timestamp": "2026-05-27T10:11:41.126099+00:00",
       "attempt": 1,
       "step_count": 2
     },
     {
       "event_index": 7,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.064285+00:00",
+      "timestamp": "2026-05-27T10:11:41.126101+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -111,7 +111,7 @@
     {
       "event_index": 8,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.064569+00:00",
+      "timestamp": "2026-05-27T10:11:41.126434+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -128,7 +128,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/recover-stop",
           "workspace_files": [],
           "path": "../escape.txt",
-          "tool_timestamp": "2026-05-26T18:47:33.064563+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.126429+00:00"
         }
       },
       "status": "failed",
@@ -151,7 +151,7 @@
     {
       "event_index": 9,
       "event_type": "deterministic_repair_triggered",
-      "timestamp": "2026-05-26T18:47:33.064905+00:00",
+      "timestamp": "2026-05-27T10:11:41.126708+00:00",
       "step_index": 0,
       "action": "stop",
       "reason": "Same failure repeated; deterministic repair stopped.",
@@ -161,7 +161,7 @@
     {
       "event_index": 10,
       "event_type": "quality_decision",
-      "timestamp": "2026-05-26T18:47:33.064933+00:00",
+      "timestamp": "2026-05-27T10:11:41.126732+00:00",
       "passed": false,
       "category": "unknown",
       "score": 0.0,
@@ -195,7 +195,7 @@
     {
       "event_index": 11,
       "event_type": "goal_failed",
-      "timestamp": "2026-05-26T18:47:33.064938+00:00",
+      "timestamp": "2026-05-27T10:11:41.126737+00:00",
       "reason": "Same failure repeated; deterministic repair stopped."
     }
   ]

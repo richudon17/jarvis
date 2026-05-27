@@ -1,15 +1,15 @@
 {
   "goal_id": "test-e2e-1",
   "goal": "Create artifact and finish",
-  "trace_started_at": "2026-05-26T18:47:33.161342+00:00",
-  "trace_ended_at": "2026-05-26T18:47:33.181091+00:00",
-  "final_status": "aborted",
-  "final_reason": "orchestrator exited without explicit completion/failure",
+  "trace_started_at": "2026-05-27T10:11:41.222572+00:00",
+  "trace_ended_at": "2026-05-27T10:11:41.243464+00:00",
+  "final_status": "completed",
+  "final_reason": "done",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-26T18:47:33.161354+00:00",
+      "timestamp": "2026-05-27T10:11:41.222587+00:00",
       "goal_id": "test-e2e-1",
       "goal": "Create artifact and finish",
       "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/test-e2e-1"
@@ -17,13 +17,13 @@
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-26T18:47:33.162515+00:00",
-      "summary": "Working directory is empty."
+      "timestamp": "2026-05-27T10:11:41.223901+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/test-e2e-1\nExisting files (1):\n  - execution_trace.json (5741 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-26T18:47:33.162526+00:00",
+      "timestamp": "2026-05-27T10:11:41.223912+00:00",
       "plan_summary": "Write artifact and finish",
       "step_count": 2,
       "step_indexes": [
@@ -34,20 +34,20 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.162531+00:00",
+      "timestamp": "2026-05-27T10:11:41.223917+00:00",
       "step_index": 1,
       "tool": "file_write",
       "input": {
-        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-30/test_orchestrator_end_to_end_s0/artifact.py",
         "content": "print(\"hello\")\n"
       }
     },
     {
       "event_index": 4,
       "event_type": "python_smoke_test",
-      "timestamp": "2026-05-26T18:47:33.179250+00:00",
+      "timestamp": "2026-05-27T10:11:41.241085+00:00",
       "step_index": 1,
-      "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+      "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-30/test_orchestrator_end_to_end_s0/artifact.py",
       "smoke_result": {
         "compiled": true,
         "executed": true,
@@ -55,7 +55,7 @@
         "stdout": "hello\n",
         "stderr": "",
         "timeout": false,
-        "runtime_seconds": 0.015685319900512695,
+        "runtime_seconds": 0.01636815071105957,
         "safe_to_execute": true,
         "execution_skipped": false,
         "compile_error": null,
@@ -67,11 +67,11 @@
     {
       "event_index": 5,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.179294+00:00",
+      "timestamp": "2026-05-27T10:11:41.241135+00:00",
       "step_index": 1,
       "tool": "file_write",
       "input": {
-        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-18/test_orchestrator_end_to_end_s0/artifact.py",
+        "path": "/private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-30/test_orchestrator_end_to_end_s0/artifact.py",
         "content": "print(\"hello\")\n"
       },
       "output": {
@@ -87,7 +87,7 @@
             "stdout": "hello\n",
             "stderr": "",
             "timeout": false,
-            "runtime_seconds": 0.015685319900512695,
+            "runtime_seconds": 0.01636815071105957,
             "safe_to_execute": true,
             "execution_skipped": false,
             "compile_error": null,
@@ -113,7 +113,7 @@
     {
       "event_index": 6,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.180046+00:00",
+      "timestamp": "2026-05-27T10:11:41.241999+00:00",
       "step_index": 2,
       "tool": "done",
       "input": {
@@ -123,7 +123,7 @@
     {
       "event_index": 7,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.180690+00:00",
+      "timestamp": "2026-05-27T10:11:41.242809+00:00",
       "step_index": 2,
       "tool": "done",
       "input": {
@@ -154,10 +154,40 @@
     },
     {
       "event_index": 8,
-      "event_type": "trace_finalized_on_exit",
-      "timestamp": "2026-05-26T18:47:33.181087+00:00",
-      "status": "running",
-      "reason": "orchestrator exited"
+      "event_type": "quality_decision",
+      "timestamp": "2026-05-27T10:11:41.243453+00:00",
+      "passed": true,
+      "category": "code",
+      "score": 1.0,
+      "issues": [],
+      "reasoning_trace": [
+        "Category=code: validating Python artifact quality.",
+        "Successful Python file_write steps: 1.",
+        "Evaluating artifact: /private/var/folders/m_/wkplx4cj70b1vgdjyrfn9w0w0000gn/T/pytest-of-richu/pytest-30/test_orchestrator_end_to_end_s0/artifact.py.",
+        "Artifact size characters: 15.",
+        "AST parse succeeded.",
+        "Executable logic markers found.",
+        "No placeholder/stub markers detected.",
+        "Final code score=1.00, passed=True."
+      ],
+      "failure_factors": [],
+      "decision_reason": "quality passed",
+      "advisory": {
+        "verify_status": "ok",
+        "verify_hints": [],
+        "verify_confidence": 0.85,
+        "semantic_status": "warn",
+        "semantic_hints": [
+          "Could not infer semantic category from goal text."
+        ],
+        "semantic_confidence": 0.4
+      }
+    },
+    {
+      "event_index": 9,
+      "event_type": "goal_completed",
+      "timestamp": "2026-05-27T10:11:41.243461+00:00",
+      "summary": "done"
     }
   ]
 }

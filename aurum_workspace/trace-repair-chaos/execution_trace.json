@@ -1,15 +1,15 @@
 {
   "goal_id": "trace-repair-chaos",
   "goal": "repair chaos",
-  "trace_started_at": "2026-05-26T18:47:33.100588+00:00",
-  "trace_ended_at": "2026-05-26T18:47:33.103219+00:00",
+  "trace_started_at": "2026-05-27T10:11:41.162450+00:00",
+  "trace_ended_at": "2026-05-27T10:11:41.165234+00:00",
   "final_status": "failed",
   "final_reason": "Same failure repeated; deterministic repair stopped.",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-26T18:47:33.100592+00:00",
+      "timestamp": "2026-05-27T10:11:41.162458+00:00",
       "goal_id": "trace-repair-chaos",
       "goal": "repair chaos",
       "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-repair-chaos"
@@ -17,13 +17,13 @@
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-26T18:47:33.101503+00:00",
-      "summary": "Working directory is empty."
+      "timestamp": "2026-05-27T10:11:41.163521+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-repair-chaos\nExisting files (1):\n  - execution_trace.json (6064 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-26T18:47:33.101531+00:00",
+      "timestamp": "2026-05-27T10:11:41.163526+00:00",
       "plan_summary": "bad repair plan",
       "step_count": 2,
       "step_indexes": [
@@ -34,7 +34,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.101536+00:00",
+      "timestamp": "2026-05-27T10:11:41.163530+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -45,7 +45,7 @@
     {
       "event_index": 4,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.101901+00:00",
+      "timestamp": "2026-05-27T10:11:41.163862+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -62,7 +62,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-repair-chaos",
           "workspace_files": [],
           "path": "../oops.txt",
-          "tool_timestamp": "2026-05-26T18:47:33.101894+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.163855+00:00"
         }
       },
       "status": "failed",
@@ -85,7 +85,7 @@
     {
       "event_index": 5,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-26T18:47:33.102495+00:00",
+      "timestamp": "2026-05-27T10:11:41.164415+00:00",
       "trigger": "step_failure",
       "attempt": 1,
       "reason": "path must stay inside the workspace"
@@ -93,14 +93,14 @@
     {
       "event_index": 6,
       "event_type": "replan_result",
-      "timestamp": "2026-05-26T18:47:33.102500+00:00",
+      "timestamp": "2026-05-27T10:11:41.164425+00:00",
       "attempt": 1,
       "step_count": 2
     },
     {
       "event_index": 7,
       "event_type": "step_started",
-      "timestamp": "2026-05-26T18:47:33.102503+00:00",
+      "timestamp": "2026-05-27T10:11:41.164430+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -111,7 +111,7 @@
     {
       "event_index": 8,
       "event_type": "step_finished",
-      "timestamp": "2026-05-26T18:47:33.102882+00:00",
+      "timestamp": "2026-05-27T10:11:41.164851+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -128,7 +128,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-repair-chaos",
           "workspace_files": [],
           "path": "../oops.txt",
-          "tool_timestamp": "2026-05-26T18:47:33.102871+00:00"
+          "tool_timestamp": "2026-05-27T10:11:41.164843+00:00"
         }
       },
       "status": "failed",
@@ -151,7 +151,7 @@
     {
       "event_index": 9,
       "event_type": "deterministic_repair_triggered",
-      "timestamp": "2026-05-26T18:47:33.103189+00:00",
+      "timestamp": "2026-05-27T10:11:41.165201+00:00",
       "step_index": 0,
       "action": "stop",
       "reason": "Same failure repeated; deterministic repair stopped.",
@@ -161,7 +161,7 @@
     {
       "event_index": 10,
       "event_type": "quality_decision",
-      "timestamp": "2026-05-26T18:47:33.103213+00:00",
+      "timestamp": "2026-05-27T10:11:41.165225+00:00",
       "passed": false,
       "category": "unknown",
       "score": 0.0,
@@ -195,7 +195,7 @@
     {
       "event_index": 11,
       "event_type": "goal_failed",
-      "timestamp": "2026-05-26T18:47:33.103218+00:00",
+      "timestamp": "2026-05-27T10:11:41.165231+00:00",
       "reason": "Same failure repeated; deterministic repair stopped."
     }
   ]

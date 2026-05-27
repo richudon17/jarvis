@@ -178,6 +178,7 @@ class Orchestrator:
             "attempted": [],
             "step_results": {},
             "replan_count": 0,
+            "last_quality_failure": None,
             "failure_fingerprints": set(),
         }
 
@@ -351,6 +352,7 @@ class Orchestrator:
                         self.memory.episodic.record(goal_id, goal, "completed", "done")
                         return f"completed: {reason}"
 
+                    state["last_quality_failure"] = quality_reason
                     if state["replan_count"] < MAX_REPLAN_ATTEMPTS:
                         state["replan_count"] += 1
                         _append_trace(
@@ -465,12 +467,12 @@ class Orchestrator:
                     )
                     continue
 
-                fail_reason = failure_reason or "Plan exhausted"
+                fail_reason = failure_reason or state.get("last_quality_failure") or "Plan exhausted"
                 _append_trace(trace_events, "goal_failed", reason=fail_reason)
                 flush_trace("failed", fail_reason)
                 return self._fail(goal_id, fail_reason, goal)
 
-            fail_reason = "Plan exhausted"
+            fail_reason = state.get("last_quality_failure") or "Plan exhausted"
             _append_trace(trace_events, "goal_failed", reason=fail_reason)
             flush_trace("failed", fail_reason)
             return self._fail(goal_id, fail_reason, goal)
