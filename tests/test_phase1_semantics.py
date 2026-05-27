@@ -131,7 +131,8 @@ def test_evaluator_uses_structured_ok_error_not_substrings():
         "status": "failed",
     }
     evaluated = evaluate_step(step)
-    assert evaluated["evaluation"]["passed"] is False
+    assert evaluated["observation"]["ok"] is False
+    assert len(evaluated["observation"]["issues"]) > 0
 
 
 def test_placeholder_replacement_does_not_corrupt_fstrings():

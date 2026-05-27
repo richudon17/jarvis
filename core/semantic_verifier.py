@@ -28,6 +28,8 @@ def _is_trivial_placeholder_code(content: str) -> bool:
     if not trimmed:
         return True
     markers = ["todo", "placeholder", "not implemented", "\npass", "\n..."]
+    if trimmed in ("pass", "..."):
+        return True
     return any(marker in trimmed for marker in markers)
 
 
@@ -51,6 +53,22 @@ def semantic_verify_goal(
         else:
             evidence.append("summarize_text step present")
             confidence = 0.75
+            # Check written files have a sources section
+            file_writes = [st for st in completed_steps if st.get("tool") == "file_write" and st.get("status") == "success"]
+            for fw in file_writes:
+                path = str((fw.get("tool_input") or {}).get("path", ""))
+                try:
+                    from pathlib import Path as _Path
+                    content = _Path(path).read_text(encoding="utf-8").lower()
+                    import re as _re
+                    has_sources_section = bool(_re.search(
+                        r'(^|\n)#{1,3}\s*(sources?|references?)', content, _re.IGNORECASE
+                    ))
+                    if not has_sources_section:
+                        hints.append("Research summary missing sources/references section.")
+                except Exception:
+                    pass
+            
 
     elif category == "calculation":
         run_steps = [st for st in completed_steps if st.get("tool") == "run_python" and st.get("status") == "success"]
@@ -98,7 +116,9 @@ def semantic_verify_goal(
         hints.append("Could not infer semantic category from goal text.")
         confidence = 0.4
 
+    passed = not hints
     return {
+        "passed": passed,
         "advisory_status": "ok" if not hints else "warn",
         "confidence": confidence,
         "hints": hints,

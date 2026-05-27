@@ -287,6 +287,7 @@ def test_observation_layer_has_no_pass_fail_field():
         "status": "failed",
     }
     observed = evaluate_step(step)
-    assert "evaluation" not in observed
+    assert "passed" not in observed  # top-level pass/fail belongs to quality.py only
     assert "observation" in observed
+    assert "evaluation" in observed
     assert isinstance(observed["observation"]["issues"], list)

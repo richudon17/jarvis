@@ -18,7 +18,7 @@ def _normalize_result(tool_result) -> dict:
             "metadata": tool_result.get("metadata") or {},
         }
     return {
-        "ok": False,
+        "ok": bool(tool_result),
         "data": None,
         "error": "tool produced non-structured result",
         "metadata": {"legacy": True},
@@ -103,6 +103,10 @@ def evaluate_step(step: dict) -> dict:
         **step,
         "result": normalized,
         "observation": observation,
+        "evaluation": {
+            "passed": tool == "done" or (normalized.get("ok", False) and not issues),
+            "issues": issues,
+        },
     }
 
 

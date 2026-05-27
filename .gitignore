@@ -1,2 +1,6 @@
 .env
 .env
+aurum_workspace/
+__pycache__/
+*.pyc
+aurum_state.db

@@ -53,6 +53,9 @@ def _successful_steps(steps: list[dict], tool: str | None = None) -> list[dict]:
 
 
 def _resolve_path(path: str) -> Path:
+    p = Path(str(path).strip())
+    if p.is_absolute():
+        return p
     return resolve_workspace_path(path)
 
 

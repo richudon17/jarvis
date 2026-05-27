@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+import ast
+from pathlib import Path
 
 
 FILENAME_PATTERN = re.compile(r"[\w./-]+\.[A-Za-z0-9]+")
@@ -78,15 +80,41 @@ def verify_goal(
         else:
             hints.append(f"expected artifact missing/empty: {path}")
 
+    # Check smoke_test metadata and Python syntax
+    confidence_cap = 1.0
+    for step in _successful_steps(completed_steps, "file_write"):
+        tool_input = step.get("tool_input") or {}
+        metadata = ((step.get("result") or {}).get("metadata") or {})
+        smoke = metadata.get("smoke_test")
+        path = str(tool_input.get("path", ""))
+
+        if smoke:
+            compiled = smoke.get("compiled")
+            executed = smoke.get("executed")
+            execution_skipped = smoke.get("execution_skipped", False)
+            if compiled is False:
+                hints.append(f"smoke_test reports compile failure for {path}")
+            elif compiled is True and not executed and not execution_skipped:
+                confidence_cap = min(confidence_cap, 0.65)
+
+        if path.endswith(".py") and Path(path).exists():
+            try:
+                content = Path(path).read_text(encoding="utf-8")
+                ast.parse(content)
+            except SyntaxError:
+                hints.append(f"Python syntax error in {path}")
+
     confidence = 0.85 if not hints else 0.45
     if not successful_steps:
         confidence = 0.25
+    confidence = min(confidence, confidence_cap)
 
     return {
+        "passed": not hints,
         "advisory_status": "ok" if not hints else "warn",
         "confidence": confidence,
         "hints": hints,
         "evidence": evidence,
         "successful_steps": len(successful_steps),
         "attempted_steps": len(attempted_steps),
-    }
+}
