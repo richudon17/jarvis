@@ -23,7 +23,7 @@ PLANNER_SYSTEM = """RULE #1 — ABSOLUTE: If the goal involves creating a game, 
 Step 0: file_write the complete code to the requested filename
 Step 1: done
 
-Do NOT use run_python. Do NOT generate any other steps. This is non-negotiable."
+Do NOT use run_python. Do NOT generate any other steps. This is non-negotiable.
 
 You are AURUM, an autonomous AI agent planner.
 
@@ -59,6 +59,8 @@ Rules:
 - Prefer simple approaches over complex web scraping
 - For goals that involve reading, modifying, and writing a file, if no specific input file is mentioned, first create a sample input file using file_write, then read it with file_read, modify the content in a run_python step or inline, then write the result back with file_write.
 - For calculation/compute/solve goals with no requested output file, use run_python to execute the calculation and produce the answer before done.
+- If the goal says "run it", "execute it", "run the script", or similar, ALWAYS add a run_file step after file_write using the same filename.
+- If the goal explicitly says "run it", "execute it", "run the script", or similar, ALWAYS add a run_python step after file_write to actually execute the file.
 - For research/search goals:
   - Use web_search first.
   - If the user asks for a summary, clear summary, or research report, use summarize_text on the web_search results before file_write.
@@ -518,27 +520,34 @@ def _raw_code_fallback_plan(goal: str) -> dict:
         )
         raw_code = _strip_markdown_fences(raw_code)
 
+    run_keywords = ["run it", "execute it", "and run", "run the script", "execute the script"]
+    should_run = any(kw in goal.lower() for kw in run_keywords)
+
+    steps = [
+        {
+            "step_index": 0,
+            "description": "Write code to file",
+            "tool": "file_write",
+            "tool_input": {"path": filename, "content": raw_code}
+        }
+    ]
+    if should_run:
+        steps.append({
+            "step_index": 1,
+            "description": "Run the script",
+            "tool": "run_file",
+            "tool_input": {"path": filename}
+        })
+    steps.append({
+        "step_index": len(steps),
+        "description": "Mark task complete",
+        "tool": "done",
+        "tool_input": {"summary": "Code written and executed successfully" if should_run else "Code written successfully to file"}
+    })
+
     return {
         "plan_summary": "Write code to file directly",
-        "steps": [
-            {
-                "step_index": 0,
-                "description": "Write code to file",
-                "tool": "file_write",
-                "tool_input": {
-                    "path": filename,
-                    "content": raw_code
-                }
-            },
-            {
-                "step_index": 1,
-                "description": "Mark task complete",
-                "tool": "done",
-                "tool_input": {
-                    "summary": "Code written successfully to file"
-                }
-            }
-        ]
+        "steps": steps
     }
 
 

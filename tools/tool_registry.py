@@ -336,6 +336,28 @@ def run_python(code: str) -> dict:
 # ──────────────────────────────────────────────
 # TOOL REGISTRY
 # ──────────────────────────────────────────────
+def run_file(path: str) -> dict:
+    """Execute an existing Python file from the workspace."""
+    try:
+        resolved = resolve_workspace_path(path)
+        if not resolved.exists():
+            return _fail(f"file not found: {path}", _workspace_metadata())
+        result = subprocess.run(
+            ["python3", str(resolved)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(resolved.parent),
+        )
+        return _ok(
+            {"stdout": result.stdout or "", "stderr": result.stderr or "", "exit_code": result.returncode},
+            _workspace_metadata({"exit_code": result.returncode}),
+        )
+    except subprocess.TimeoutExpired:
+        return _fail("timeout", _workspace_metadata({"timeout": True}))
+    except Exception as e:
+        return _fail(e, _workspace_metadata())
+
 
 TOOLS = {
     "web_search": {
@@ -367,6 +389,11 @@ TOOLS = {
         "fn": run_python,
         "description": "Execute Python code and return stdout/stderr/exit_code. Input: {'code': str}",
         "params": ["code"],
+    },
+    "run_file": {
+        "fn": run_file,
+        "description": "Execute an existing Python file from the workspace by path. Input: {'path': str}",
+        "params": ["path"],
     },
 }
 

@@ -1,15 +1,15 @@
 {
   "goal_id": "trace-quality-stress",
   "goal": "Write weak.py",
-  "trace_started_at": "2026-05-27T10:11:41.172425+00:00",
-  "trace_ended_at": "2026-05-27T10:11:41.176089+00:00",
+  "trace_started_at": "2026-05-27T10:38:25.412262+00:00",
+  "trace_ended_at": "2026-05-27T10:38:25.415275+00:00",
   "final_status": "failed",
   "final_reason": "Quality check failed: Contains placeholder/stub logic",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-27T10:11:41.172434+00:00",
+      "timestamp": "2026-05-27T10:38:25.412266+00:00",
       "goal_id": "trace-quality-stress",
       "goal": "Write weak.py",
       "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress"
@@ -17,13 +17,13 @@
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-27T10:11:41.173582+00:00",
-      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress\nExisting files (2):\n  - execution_trace.json (6668 bytes)\n  - weak.py (21 bytes)"
+      "timestamp": "2026-05-27T10:38:25.413050+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress\nExisting files (2):\n  - execution_trace.json (6746 bytes)\n  - weak.py (21 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-27T10:11:41.173587+00:00",
+      "timestamp": "2026-05-27T10:38:25.413054+00:00",
       "plan_summary": "weak code",
       "step_count": 2,
       "step_indexes": [
@@ -34,7 +34,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:11:41.173591+00:00",
+      "timestamp": "2026-05-27T10:38:25.413057+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -45,7 +45,7 @@
     {
       "event_index": 4,
       "event_type": "python_smoke_test",
-      "timestamp": "2026-05-27T10:11:41.174523+00:00",
+      "timestamp": "2026-05-27T10:38:25.414186+00:00",
       "step_index": 0,
       "path": "weak.py",
       "smoke_result": {
@@ -67,7 +67,7 @@
     {
       "event_index": 5,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:11:41.174533+00:00",
+      "timestamp": "2026-05-27T10:38:25.414194+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -90,7 +90,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-quality-stress/weak.py",
           "bytes_written": 21,
           "python_syntax_valid": true,
-          "tool_timestamp": "2026-05-27T10:11:41.174118+00:00",
+          "tool_timestamp": "2026-05-27T10:38:25.413781+00:00",
           "smoke_test": {
             "compiled": false,
             "executed": false,
@@ -124,7 +124,7 @@
     {
       "event_index": 6,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:11:41.174920+00:00",
+      "timestamp": "2026-05-27T10:38:25.414467+00:00",
       "step_index": 1,
       "tool": "done",
       "input": {
@@ -134,7 +134,7 @@
     {
       "event_index": 7,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:11:41.175219+00:00",
+      "timestamp": "2026-05-27T10:38:25.414758+00:00",
       "step_index": 1,
       "tool": "done",
       "input": {
@@ -166,7 +166,7 @@
     {
       "event_index": 8,
       "event_type": "quality_decision",
-      "timestamp": "2026-05-27T10:11:41.176076+00:00",
+      "timestamp": "2026-05-27T10:38:25.415264+00:00",
       "passed": false,
       "category": "code",
       "score": 0.5,
@@ -206,7 +206,7 @@
     {
       "event_index": 9,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-27T10:11:41.176083+00:00",
+      "timestamp": "2026-05-27T10:38:25.415270+00:00",
       "trigger": "quality_failure",
       "attempt": 1,
       "reason": "Quality check failed: Contains placeholder/stub logic"
@@ -214,14 +214,14 @@
     {
       "event_index": 10,
       "event_type": "replan_result",
-      "timestamp": "2026-05-27T10:11:41.176086+00:00",
+      "timestamp": "2026-05-27T10:38:25.415273+00:00",
       "attempt": 1,
       "step_count": 0
     },
     {
       "event_index": 11,
       "event_type": "goal_failed",
-      "timestamp": "2026-05-27T10:11:41.176087+00:00",
+      "timestamp": "2026-05-27T10:38:25.415274+00:00",
       "reason": "Quality check failed: Contains placeholder/stub logic"
     }
   ]
