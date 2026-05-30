@@ -8,6 +8,8 @@ This module is intentionally non-authoritative:
 
 from __future__ import annotations
 
+import json
+
 
 def _normalize_result(tool_result) -> dict:
     if isinstance(tool_result, dict):
@@ -113,11 +115,17 @@ def evaluate_step(step: dict) -> dict:
 def check_loop_detection(step_history: list, current_step: dict, threshold: int = 3) -> bool:
     """Detect if we're stuck in a loop — same tool + same input repeated too many times."""
     tool = current_step.get("tool")
-    tool_input = str(current_step.get("tool_input", {}))
+    current_input = current_step.get("tool_input", {})
+    # Sort dict keys so {"a":1,"b":2} and {"b":2,"a":1} are treated identically
+    normalized_input = json.dumps(current_input, sort_keys=True) if isinstance(current_input, dict) else str(current_input)
 
     count = sum(
         1
         for s in step_history
-        if s.get("tool") == tool and str(s.get("tool_input", {})) == tool_input
+        if s.get("tool") == tool and (
+            json.dumps(s.get("tool_input", {}), sort_keys=True)
+            if isinstance(s.get("tool_input"), dict)
+            else str(s.get("tool_input", {}))
+        ) == normalized_input
     )
     return count >= threshold

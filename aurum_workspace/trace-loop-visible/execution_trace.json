@@ -1,29 +1,30 @@
 {
   "goal_id": "trace-loop-visible",
   "goal": "force loop",
-  "trace_started_at": "2026-05-27T10:38:25.432059+00:00",
-  "trace_ended_at": "2026-05-27T10:38:25.435067+00:00",
+  "trace_started_at": "2026-05-30T16:30:21.683044+00:00",
+  "trace_ended_at": "2026-05-30T16:30:21.687763+00:00",
   "final_status": "failed",
   "final_reason": "Loop detected",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-27T10:38:25.432064+00:00",
+      "timestamp": "2026-05-30T16:30:21.683062+00:00",
       "goal_id": "trace-loop-visible",
       "goal": "force loop",
-      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible"
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible",
+      "resumed_from_steps": 0
     },
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-27T10:38:25.432895+00:00",
-      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible\nExisting files (1):\n  - execution_trace.json (7338 bytes)"
+      "timestamp": "2026-05-30T16:30:21.684830+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible\nExisting files (1):\n  - execution_trace.json (7369 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-27T10:38:25.432898+00:00",
+      "timestamp": "2026-05-30T16:30:21.684834+00:00",
       "plan_summary": "loop",
       "step_count": 4,
       "step_indexes": [
@@ -36,7 +37,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.432902+00:00",
+      "timestamp": "2026-05-30T16:30:21.684840+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -47,7 +48,7 @@
     {
       "event_index": 4,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.433221+00:00",
+      "timestamp": "2026-05-30T16:30:21.685181+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -64,7 +65,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible",
           "workspace_files": [],
           "path": "../repeat.txt",
-          "tool_timestamp": "2026-05-27T10:38:25.433215+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.685173+00:00"
         }
       },
       "status": "failed",
@@ -87,7 +88,7 @@
     {
       "event_index": 5,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-27T10:38:25.433484+00:00",
+      "timestamp": "2026-05-30T16:30:21.685508+00:00",
       "trigger": "step_failure",
       "attempt": 1,
       "reason": "path must stay inside the workspace"
@@ -95,14 +96,14 @@
     {
       "event_index": 6,
       "event_type": "replan_result",
-      "timestamp": "2026-05-27T10:38:25.433487+00:00",
+      "timestamp": "2026-05-30T16:30:21.685513+00:00",
       "attempt": 1,
       "step_count": 3
     },
     {
       "event_index": 7,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.433490+00:00",
+      "timestamp": "2026-05-30T16:30:21.685516+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -113,7 +114,7 @@
     {
       "event_index": 8,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.433813+00:00",
+      "timestamp": "2026-05-30T16:30:21.686024+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -130,7 +131,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible",
           "workspace_files": [],
           "path": "../repeat.txt",
-          "tool_timestamp": "2026-05-27T10:38:25.433807+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.686016+00:00"
         }
       },
       "status": "failed",
@@ -153,7 +154,7 @@
     {
       "event_index": 9,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-27T10:38:25.434061+00:00",
+      "timestamp": "2026-05-30T16:30:21.686426+00:00",
       "trigger": "step_failure",
       "attempt": 2,
       "reason": "path must stay inside the workspace"
@@ -161,14 +162,14 @@
     {
       "event_index": 10,
       "event_type": "replan_result",
-      "timestamp": "2026-05-27T10:38:25.434064+00:00",
+      "timestamp": "2026-05-30T16:30:21.686429+00:00",
       "attempt": 2,
       "step_count": 3
     },
     {
       "event_index": 11,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.434066+00:00",
+      "timestamp": "2026-05-30T16:30:21.686432+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -179,7 +180,7 @@
     {
       "event_index": 12,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.434376+00:00",
+      "timestamp": "2026-05-30T16:30:21.686900+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -196,7 +197,7 @@
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/trace-loop-visible",
           "workspace_files": [],
           "path": "../repeat.txt",
-          "tool_timestamp": "2026-05-27T10:38:25.434370+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.686894+00:00"
         }
       },
       "status": "failed",
@@ -219,7 +220,7 @@
     {
       "event_index": 13,
       "event_type": "replan_triggered",
-      "timestamp": "2026-05-27T10:38:25.434796+00:00",
+      "timestamp": "2026-05-30T16:30:21.687283+00:00",
       "trigger": "step_failure",
       "attempt": 3,
       "reason": "path must stay inside the workspace"
@@ -227,14 +228,14 @@
     {
       "event_index": 14,
       "event_type": "replan_result",
-      "timestamp": "2026-05-27T10:38:25.434799+00:00",
+      "timestamp": "2026-05-30T16:30:21.687287+00:00",
       "attempt": 3,
       "step_count": 3
     },
     {
       "event_index": 15,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.434801+00:00",
+      "timestamp": "2026-05-30T16:30:21.687289+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -245,7 +246,7 @@
     {
       "event_index": 16,
       "event_type": "loop_detection_triggered",
-      "timestamp": "2026-05-27T10:38:25.435065+00:00",
+      "timestamp": "2026-05-30T16:30:21.687760+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {

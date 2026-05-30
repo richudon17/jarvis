@@ -25,6 +25,7 @@ from core.workspace import (
     workspace_context_label,
     goal_workspace_dir,
 )
+from core.environment import environment_summary
 from core.planner import create_plan, replan
 from core.executor import run_step
 from core.evaluator import evaluate_step, check_loop_detection
@@ -36,6 +37,8 @@ from core.quality import review_quality
 
 from memory.memory_manager import MemoryManager
 from state.persistence import (
+    load_goal,
+    load_steps,
     init_db,
     save_goal,
     update_goal_status,
@@ -144,7 +147,8 @@ def _failure_fingerprint(step: dict, observed: dict) -> str:
     tool = step.get("tool", "")
     tool_input = str(step.get("tool_input", {}))
     issues = "|".join((observed.get("observation", {}) or {}).get("issues", []))
-    return f"{tool}|{tool_input}|{issues}"
+    error = str((observed.get("result", {}) or {}).get("error", ""))
+    return f"{tool}|{tool_input}|{issues}|{error}"
 
 
 def _quality_failure_reason(quality: dict, advisory: dict | None = None) -> str:
@@ -163,20 +167,47 @@ def _quality_failure_reason(quality: dict, advisory: dict | None = None) -> str:
 
 
 class Orchestrator:
-    def __init__(self):
-        reset_orphaned_goals()
+    def __init__(self, skip_orphan_reset: bool = False):
+        if not skip_orphan_reset:
+            reset_orphaned_goals()
         init_db()
         self.memory = MemoryManager()
 
-    def run(self, goal: str, goal_id: str | None = None) -> str:
+    def run(
+        self,
+        goal: str,
+        goal_id: str | None = None,
+        resume_from_steps: list | None = None,
+    ) -> str:
         goal_id = goal_id or str(uuid.uuid4())[:8]
         set_execution_context(goal_id, goal)
         goal_dir = goal_workspace_dir(goal_id)
 
+        # Rebuild state from persisted steps when resuming
+        restored_completed: list[dict] = []
+        restored_attempted: list[dict] = []
+        restored_results: dict = {}
+        if resume_from_steps:
+            for s in resume_from_steps:
+                step_dict = {
+                    "step_index": s.get("step_index"),
+                    "description": s.get("description", ""),
+                    "tool": s.get("tool", ""),
+                    "tool_input": s.get("tool_input") or {},
+                    "result": s.get("result") or {},
+                    "status": s.get("status", "unknown"),
+                    "observation": {},
+                    "evaluation": {"passed": s.get("status") == "success", "issues": []},
+                }
+                restored_attempted.append(step_dict)
+                if s.get("status") == "success":
+                    restored_completed.append(step_dict)
+                    restored_results[s.get("step_index")] = s.get("result") or {}
+
         state = {
-            "completed": [],
-            "attempted": [],
-            "step_results": {},
+            "completed": restored_completed,
+            "attempted": restored_attempted,
+            "step_results": restored_results,
             "replan_count": 0,
             "last_quality_failure": None,
             "failure_fingerprints": set(),
@@ -206,39 +237,63 @@ class Orchestrator:
             self.memory.short.set("execution_trace_path", str(trace_path))
             trace_flushed = True
 
+        is_resumed = bool(resume_from_steps)
         _append_trace(
             trace_events,
-            "goal_started",
+            "goal_resumed" if is_resumed else "goal_started",
             goal_id=goal_id,
             goal=goal,
             workspace=str(goal_dir),
+            resumed_from_steps=len(resume_from_steps) if is_resumed else 0,
         )
 
         try:
-            console.print(Panel(goal, title="Goal"))
+            title = f"Goal {'(Resumed)' if is_resumed else ''}"
+            console.print(Panel(goal, title=title))
+            if is_resumed:
+                console.print(f"[dim]Resuming with {len(restored_completed)} completed step(s) restored.[/dim]")
             console.print(f"[dim]{workspace_context_label(goal_id)}[/dim]")
             console.print(f"[dim]Workspace: {goal_dir}[/dim]")
             console.print(f"[dim]Workspace files: {list_workspace_files(goal_id)}[/dim]")
 
             save_goal(goal_id, goal, status="running")
+            if hasattr(self.memory.short, 'bind_goal'):  # enable write-through persistence
+                self.memory.short.bind_goal(goal_id)
             self.memory.short.set("goal", goal)
             self.memory.short.set("goal_id", goal_id)
-
-            from core.environment import environment_summary
 
             env_summary = environment_summary(goal_id=goal_id)
             self.memory.short.set("environment", env_summary)
             _append_trace(trace_events, "environment_scanned", summary=env_summary)
 
-            plan = create_plan(goal, memory=self.memory)
+            if is_resumed and state["completed"]:
+                # On resume, replan from completed steps so planner knows what's done
+                resume_reason = (
+                    f"Resuming after interruption. "
+                    f"{len(state['completed'])} step(s) already completed: "
+                    + ", ".join(
+                        s.get("description", s.get("tool", ""))
+                        for s in state["completed"]
+                    )
+                )
+                plan = replan(goal, state["completed"], {}, resume_reason, memory=self.memory)
+                _append_trace(
+                    trace_events,
+                    "plan_resumed",
+                    plan_summary=plan.get("plan_summary", ""),
+                    step_count=len(plan.get("steps", [])),
+                    completed_steps_restored=len(state["completed"]),
+                )
+            else:
+                plan = create_plan(goal, memory=self.memory)
+                _append_trace(
+                    trace_events,
+                    "plan_created",
+                    plan_summary=plan.get("plan_summary", ""),
+                    step_count=len(plan.get("steps", [])),
+                    step_indexes=[s.get("step_index") for s in plan.get("steps", [])],
+                )
             steps = plan.get("steps", [])
-            _append_trace(
-                trace_events,
-                "plan_created",
-                plan_summary=plan.get("plan_summary", ""),
-                step_count=len(steps),
-                step_indexes=[s.get("step_index") for s in steps],
-            )
 
             while steps and len(state["attempted"]) < MAX_STEPS:
                 step = steps.pop(0)
@@ -465,6 +520,13 @@ class Orchestrator:
                         attempt=state["replan_count"],
                         step_count=len(steps),
                     )
+                    if not steps:
+                        _append_trace(
+                            trace_events,
+                            "replan_returned_empty",
+                            attempt=state["replan_count"],
+                            reason="replan produced no steps",
+                        )
                     continue
 
                 fail_reason = failure_reason or state.get("last_quality_failure") or "Plan exhausted"
@@ -473,6 +535,8 @@ class Orchestrator:
                 return self._fail(goal_id, fail_reason, goal)
 
             fail_reason = state.get("last_quality_failure") or "Plan exhausted"
+            if len(state["attempted"]) >= MAX_STEPS:
+                _append_trace(trace_events, "max_steps_reached", steps_attempted=len(state["attempted"]), limit=MAX_STEPS)
             _append_trace(trace_events, "goal_failed", reason=fail_reason)
             flush_trace("failed", fail_reason)
             return self._fail(goal_id, fail_reason, goal)

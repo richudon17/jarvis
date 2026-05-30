@@ -107,7 +107,10 @@ def _infer_category(goal: str, filenames: list[str], completed_steps: list[dict]
         return CATEGORY_RESEARCH
 
     if _goal_mentions(gl, ["calculate", "compute", "solve", "fibonacci", "sum", "average", "mean", "median"]):
-        return CATEGORY_CALCULATION
+        # If goal also involves saving a .py file, treat as code — not pure calculation
+        has_py_file = any(name.endswith(".py") for name in filenames)
+        if not has_py_file:
+            return CATEGORY_CALCULATION
 
     if filenames and _is_direct_file_overwrite_goal(gl):
         return CATEGORY_FILE
@@ -333,9 +336,11 @@ def _review_calculation(completed_steps: list[dict]) -> dict[str, Any]:
     issues: list[str] = []
 
     run_steps = _successful_steps(completed_steps, "run_python")
-    reasoning.append(f"Successful run_python steps: {len(run_steps)}.")
-    if not run_steps:
-        issue = "No successful run_python evidence"
+    run_file_steps = _successful_steps(completed_steps, "run_file")
+    all_run_steps = run_steps + run_file_steps
+    reasoning.append(f"Successful run_python steps: {len(run_steps)}, run_file steps: {len(run_file_steps)}.")
+    if not all_run_steps:
+        issue = "No successful run_python or run_file evidence"
         issues.append(issue)
         factors.append(_failure_factor("missing_runtime_calculation", 1.0, issue))
         return _quality_result(
@@ -347,21 +352,31 @@ def _review_calculation(completed_steps: list[dict]) -> dict[str, Any]:
             failure_factors=factors,
         )
 
-    stdout = ((run_steps[-1].get("result") or {}).get("data") or {}).get("stdout", "")
+    # Prefer run_python for stdout; fall back to run_file
+    best_run = run_steps[-1] if run_steps else run_file_steps[-1]
+    stdout = ((best_run.get("result") or {}).get("data") or {}).get("stdout", "")
     stdout_len = len(stdout.strip()) if isinstance(stdout, str) else 0
-    reasoning.append(f"run_python stdout length: {stdout_len}.")
+    reasoning.append(f"run stdout length: {stdout_len}.")
     if not isinstance(stdout, str) or not stdout.strip():
-        issue = "run_python produced no meaningful stdout"
-        issues.append(issue)
-        factors.append(_failure_factor("empty_calculation_output", 0.8, issue))
-        return _quality_result(
-            passed=False,
-            score=0.2,
-            issues=issues,
-            category=CATEGORY_CALCULATION,
-            reasoning_trace=reasoning,
-            failure_factors=factors,
-        )
+        # run_file may write output to a file rather than stdout — check for file writes
+        output_writes = [
+            st for st in _successful_steps(completed_steps, "file_write")
+            if not str((st.get("tool_input") or {}).get("path", "")).endswith(".py")
+        ]
+        if output_writes:
+            reasoning.append("No stdout but output file write found — accepting as calculation evidence.")
+        else:
+            issue = "run_python/run_file produced no meaningful stdout or output file"
+            issues.append(issue)
+            factors.append(_failure_factor("empty_calculation_output", 0.8, issue))
+            return _quality_result(
+                passed=False,
+                score=0.2,
+                issues=issues,
+                category=CATEGORY_CALCULATION,
+                reasoning_trace=reasoning,
+                failure_factors=factors,
+            )
 
     reasoning.append("Calculation output validated.")
     return _quality_result(

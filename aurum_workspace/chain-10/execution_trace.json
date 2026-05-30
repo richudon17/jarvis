@@ -1,29 +1,30 @@
 {
   "goal_id": "chain-10",
   "goal": "Create final.txt after a long chain",
-  "trace_started_at": "2026-05-27T10:38:25.318539+00:00",
-  "trace_ended_at": "2026-05-27T10:38:25.362146+00:00",
+  "trace_started_at": "2026-05-30T16:30:21.511097+00:00",
+  "trace_ended_at": "2026-05-30T16:30:21.589150+00:00",
   "final_status": "completed",
   "final_reason": "chain complete",
   "timeline": [
     {
       "event_index": 0,
       "event_type": "goal_started",
-      "timestamp": "2026-05-27T10:38:25.318545+00:00",
+      "timestamp": "2026-05-30T16:30:21.511106+00:00",
       "goal_id": "chain-10",
       "goal": "Create final.txt after a long chain",
-      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10"
+      "workspace": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10",
+      "resumed_from_steps": 0
     },
     {
       "event_index": 1,
       "event_type": "environment_scanned",
-      "timestamp": "2026-05-27T10:38:25.319616+00:00",
-      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/chain-10\nExisting files (5):\n  - execution_trace.json (16385 bytes)\n  - final.txt (4 bytes)\n  - c.txt (5 bytes)\n  - b.txt (4 bytes)\n  - a.txt (5 bytes)"
+      "timestamp": "2026-05-30T16:30:21.512889+00:00",
+      "summary": "Working directory: /Users/richu/Downloads/jarvis/aurum_workspace/chain-10\nExisting files (5):\n  - execution_trace.json (16416 bytes)\n  - final.txt (4 bytes)\n  - c.txt (5 bytes)\n  - b.txt (4 bytes)\n  - a.txt (5 bytes)"
     },
     {
       "event_index": 2,
       "event_type": "plan_created",
-      "timestamp": "2026-05-27T10:38:25.319622+00:00",
+      "timestamp": "2026-05-30T16:30:21.512939+00:00",
       "plan_summary": "chain plan",
       "step_count": 10,
       "step_indexes": [
@@ -42,7 +43,7 @@
     {
       "event_index": 3,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.319626+00:00",
+      "timestamp": "2026-05-30T16:30:21.512948+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -53,7 +54,7 @@
     {
       "event_index": 4,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.320407+00:00",
+      "timestamp": "2026-05-30T16:30:21.513617+00:00",
       "step_index": 0,
       "tool": "file_write",
       "input": {
@@ -76,7 +77,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/a.txt",
           "bytes_written": 5,
           "python_syntax_valid": false,
-          "tool_timestamp": "2026-05-27T10:38:25.320398+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.513607+00:00"
         }
       },
       "status": "success",
@@ -95,7 +96,7 @@
     {
       "event_index": 5,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.320813+00:00",
+      "timestamp": "2026-05-30T16:30:21.513949+00:00",
       "step_index": 1,
       "tool": "file_read",
       "input": {
@@ -105,7 +106,7 @@
     {
       "event_index": 6,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.321272+00:00",
+      "timestamp": "2026-05-30T16:30:21.514524+00:00",
       "step_index": 1,
       "tool": "file_read",
       "input": {
@@ -124,7 +125,7 @@
           "workspace_files": [],
           "path": "a.txt",
           "bytes_read": 5,
-          "tool_timestamp": "2026-05-27T10:38:25.321266+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.514516+00:00"
         }
       },
       "status": "success",
@@ -143,7 +144,7 @@
     {
       "event_index": 7,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.321535+00:00",
+      "timestamp": "2026-05-30T16:30:21.514844+00:00",
       "step_index": 2,
       "tool": "run_python",
       "input": {
@@ -153,7 +154,7 @@
     {
       "event_index": 8,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.337041+00:00",
+      "timestamp": "2026-05-30T16:30:21.559332+00:00",
       "step_index": 2,
       "tool": "run_python",
       "input": {
@@ -172,12 +173,12 @@
           "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10",
           "workspace_files": [],
-          "tmpfile": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/tmpt883ancv.py",
+          "tmpfile": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/tmp33v_7tbv.py",
           "exit_code": 0,
           "timeout": false,
           "stdout_len": 5,
           "stderr_len": 0,
-          "tool_timestamp": "2026-05-27T10:38:25.336994+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.559268+00:00"
         }
       },
       "status": "success",
@@ -196,7 +197,7 @@
     {
       "event_index": 9,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.337543+00:00",
+      "timestamp": "2026-05-30T16:30:21.560005+00:00",
       "step_index": 3,
       "tool": "file_write",
       "input": {
@@ -207,7 +208,7 @@
     {
       "event_index": 10,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.338660+00:00",
+      "timestamp": "2026-05-30T16:30:21.561197+00:00",
       "step_index": 3,
       "tool": "file_write",
       "input": {
@@ -230,7 +231,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/b.txt",
           "bytes_written": 4,
           "python_syntax_valid": false,
-          "tool_timestamp": "2026-05-27T10:38:25.338648+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.561183+00:00"
         }
       },
       "status": "success",
@@ -249,7 +250,7 @@
     {
       "event_index": 11,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.338977+00:00",
+      "timestamp": "2026-05-30T16:30:21.561968+00:00",
       "step_index": 4,
       "tool": "file_read",
       "input": {
@@ -259,7 +260,7 @@
     {
       "event_index": 12,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.339598+00:00",
+      "timestamp": "2026-05-30T16:30:21.563402+00:00",
       "step_index": 4,
       "tool": "file_read",
       "input": {
@@ -278,7 +279,7 @@
           "workspace_files": [],
           "path": "b.txt",
           "bytes_read": 4,
-          "tool_timestamp": "2026-05-27T10:38:25.339590+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.563389+00:00"
         }
       },
       "status": "success",
@@ -297,7 +298,7 @@
     {
       "event_index": 13,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.339922+00:00",
+      "timestamp": "2026-05-30T16:30:21.563852+00:00",
       "step_index": 5,
       "tool": "run_python",
       "input": {
@@ -307,7 +308,7 @@
     {
       "event_index": 14,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.357212+00:00",
+      "timestamp": "2026-05-30T16:30:21.584343+00:00",
       "step_index": 5,
       "tool": "run_python",
       "input": {
@@ -326,12 +327,12 @@
           "workspace_root": "/Users/richu/Downloads/jarvis/aurum_workspace",
           "workspace_dir": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10",
           "workspace_files": [],
-          "tmpfile": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/tmpq451qzfd.py",
+          "tmpfile": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/tmptj11f27q.py",
           "exit_code": 0,
           "timeout": false,
           "stdout_len": 6,
           "stderr_len": 0,
-          "tool_timestamp": "2026-05-27T10:38:25.357161+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.584294+00:00"
         }
       },
       "status": "success",
@@ -350,7 +351,7 @@
     {
       "event_index": 15,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.357940+00:00",
+      "timestamp": "2026-05-30T16:30:21.584887+00:00",
       "step_index": 6,
       "tool": "file_write",
       "input": {
@@ -361,7 +362,7 @@
     {
       "event_index": 16,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.358922+00:00",
+      "timestamp": "2026-05-30T16:30:21.585761+00:00",
       "step_index": 6,
       "tool": "file_write",
       "input": {
@@ -384,7 +385,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/c.txt",
           "bytes_written": 5,
           "python_syntax_valid": false,
-          "tool_timestamp": "2026-05-27T10:38:25.358915+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.585753+00:00"
         }
       },
       "status": "success",
@@ -403,7 +404,7 @@
     {
       "event_index": 17,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.359270+00:00",
+      "timestamp": "2026-05-30T16:30:21.586155+00:00",
       "step_index": 7,
       "tool": "file_read",
       "input": {
@@ -413,7 +414,7 @@
     {
       "event_index": 18,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.359745+00:00",
+      "timestamp": "2026-05-30T16:30:21.586717+00:00",
       "step_index": 7,
       "tool": "file_read",
       "input": {
@@ -432,7 +433,7 @@
           "workspace_files": [],
           "path": "c.txt",
           "bytes_read": 5,
-          "tool_timestamp": "2026-05-27T10:38:25.359739+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.586710+00:00"
         }
       },
       "status": "success",
@@ -451,7 +452,7 @@
     {
       "event_index": 19,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.360036+00:00",
+      "timestamp": "2026-05-30T16:30:21.587094+00:00",
       "step_index": 8,
       "tool": "file_write",
       "input": {
@@ -462,7 +463,7 @@
     {
       "event_index": 20,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.360717+00:00",
+      "timestamp": "2026-05-30T16:30:21.587832+00:00",
       "step_index": 8,
       "tool": "file_write",
       "input": {
@@ -485,7 +486,7 @@
           "resolved_path": "/Users/richu/Downloads/jarvis/aurum_workspace/chain-10/final.txt",
           "bytes_written": 4,
           "python_syntax_valid": false,
-          "tool_timestamp": "2026-05-27T10:38:25.360708+00:00"
+          "tool_timestamp": "2026-05-30T16:30:21.587824+00:00"
         }
       },
       "status": "success",
@@ -504,7 +505,7 @@
     {
       "event_index": 21,
       "event_type": "step_started",
-      "timestamp": "2026-05-27T10:38:25.361061+00:00",
+      "timestamp": "2026-05-30T16:30:21.588172+00:00",
       "step_index": 9,
       "tool": "done",
       "input": {
@@ -514,7 +515,7 @@
     {
       "event_index": 22,
       "event_type": "step_finished",
-      "timestamp": "2026-05-27T10:38:25.361454+00:00",
+      "timestamp": "2026-05-30T16:30:21.588523+00:00",
       "step_index": 9,
       "tool": "done",
       "input": {
@@ -546,7 +547,7 @@
     {
       "event_index": 23,
       "event_type": "quality_decision",
-      "timestamp": "2026-05-27T10:38:25.362137+00:00",
+      "timestamp": "2026-05-30T16:30:21.589141+00:00",
       "passed": true,
       "category": "file",
       "score": 0.78,
@@ -574,7 +575,7 @@
     {
       "event_index": 24,
       "event_type": "goal_completed",
-      "timestamp": "2026-05-27T10:38:25.362143+00:00",
+      "timestamp": "2026-05-30T16:30:21.589148+00:00",
       "summary": "chain complete"
     }
   ]

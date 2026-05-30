@@ -9,7 +9,9 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "aurum_state.db")
+from pathlib import Path
+
+DB_PATH = str(Path(__file__).resolve().parent.parent / "aurum_state.db")
 
 
 def _get_conn():
@@ -74,9 +76,18 @@ def init_db():
                 memory_type TEXT,
                 key TEXT,
                 value TEXT,
-                created_at TEXT
+                created_at TEXT,
+                UNIQUE(memory_type, key)
             )
         """)
+        # Add UNIQUE constraint to existing DBs that predate this migration
+        try:
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_memory_type_key
+                ON memory (memory_type, key)
+            """)
+        except Exception:
+            pass
         conn.commit()
 
 
@@ -173,5 +184,25 @@ def reset_orphaned_goals():
     with _conn_ctx() as conn:
         conn.execute(
             "UPDATE goals SET status='failed' WHERE status='running'"
+        )
+        conn.commit()
+
+
+def list_interrupted_goals() -> list:
+    """Return goals that were left in 'running' state — interrupted mid-execution."""
+    with _conn_ctx() as conn:
+        rows = conn.execute(
+            "SELECT * FROM goals WHERE status='running' ORDER BY updated_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def abandon_goal(goal_id: str) -> None:
+    """Mark a goal as abandoned (user chose not to resume)."""
+    now = datetime.now(timezone.utc).isoformat()
+    with _conn_ctx() as conn:
+        conn.execute(
+            "UPDATE goals SET status='abandoned', updated_at=? WHERE id=?",
+            (now, goal_id),
         )
         conn.commit()
